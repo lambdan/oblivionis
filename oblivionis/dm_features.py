@@ -102,6 +102,25 @@ def dm_remove_session(message) -> str:
     
     return storage.remove_session(userId=user_id_from_message(message), sessionId=session_id)
 
+def dm_platform(message) -> str:
+    userId = user_id_from_message(message)
+    if message.content == "!platform":
+        user = storage.User.get_or_none(storage.User.id == userId)
+        if user is None:
+            return "User not found"
+        return f"Your current platform is **{user.default_platform}**. Use `!platform <name>` to change it."
+    
+    parts = message.content[10:].split()
+    if len(parts) != 1:
+        return "Invalid command format. Use: !platform <name>"
+    
+    platform = parts[0].lower()
+    if platform not in storage.VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
+    
+    userId = user_id_from_message(message)
+    return storage.set_default_platform(userId=userId, platform=platform)
+
 def dm_receive(message) -> str:
     if message.content.startswith("!help"):
         return dm_help()
@@ -115,5 +134,7 @@ def dm_receive(message) -> str:
         return dm_merge_game(message)
     elif message.content.startswith("!remove "):
         return dm_remove_session(message)
+    elif message.content.startswith("!platform"):
+        return dm_platform(message)
     else:
         return "Unknown command. Use `!help` to see available commands."

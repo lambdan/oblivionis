@@ -3,6 +3,8 @@ import logging
 logger = logging.getLogger("storage.py")
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
+VALID_PLATFORMS = ["pc", "switch", "switch2", "ps1", "ps2", "ps3", "ps4", "ps5", "xbox", "xbox360", "xboxone", "xboxseries", "steam-deck", "nes", "snes", "n64", "gamecube", "wii", "wiiu", "ds", "3ds", "psp", "vita"]
+
 from peewee import (
     CharField,
     DateTimeField,
@@ -28,6 +30,7 @@ class BaseModel(Model):
 class User(BaseModel):
     id = CharField(primary_key=True, max_length=20)
     name = CharField()
+    default_platform = CharField(default="pc", max_length=20)
 
 
 class Game(BaseModel):
@@ -45,8 +48,11 @@ class Activity(BaseModel):
 def connect_db():
     db.connect()
     db.create_tables([User, Game, Activity])
-    # Add platform column if it doesn't exist
-    db.execute_sql("ALTER TABLE activity ADD COLUMN IF NOT EXISTS platform VARCHAR(20) DEFAULT 'pc';")
+    with db.atomic():
+        # Add platform column if it doesn't exist
+        db.execute_sql("ALTER TABLE public.activity ADD COLUMN IF NOT EXISTS platform VARCHAR(20) DEFAULT 'pc';")
+        # Add default_platform column to User if it doesn't exist
+        db.execute_sql("ALTER TABLE public.user ADD COLUMN IF NOT EXISTS default_platform VARCHAR(20) DEFAULT 'pc';")
 
 
 def remove_session(userId: int, sessionId: int):
@@ -80,3 +86,16 @@ def merge_games(userId: int, gameId1: int, gameId2: int):
     except Exception as e:
         logger.error(f"Unexpected error while merging games: {e}")
         return f"ERROR: An unexpected error occurred while merging games"
+
+def set_default_platform(userId: str, platform: str) -> str:
+    if platform not in VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: {', '.join(VALID_PLATFORMS)}"
+    
+    try:
+        user = User.get(User.id == userId)
+        user.default_platform = platform
+        user.save()
+        return f"Your default platform has been set to **{platform}**"
+
+    except User.DoesNotExist:
+        return f"ERROR: User {userId} not found"
