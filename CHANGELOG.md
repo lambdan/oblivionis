@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1] - 2025-06-09
+
+### Added
+
+- Added batch mode for set platform command
+
+
 ## [0.3.0] - 2025-06-09
 
 ### Added

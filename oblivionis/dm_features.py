@@ -35,6 +35,7 @@ def dm_help() -> str:
 - `!platform <name>` - Set your default platform
 - `!listplatforms` - List all valid platforms
 - `!setplatform <session_id> <platform>` - Set the platform for a specific session
+- `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
 """
 
 def dm_add_session(message) -> str:
@@ -134,15 +135,39 @@ def dm_set_platform(message) -> str:
     parts = message.content[13:].split()
     if len(parts) != 2:
         return "Invalid command format. Use: `!setplatform <session_id> <platform>`"
-    try:
-        session_id = int(parts[0])
-        platform = parts[1].lower()
-    except ValueError:
-        return "Invalid session ID or platform. Please provide valid values."
+    
+
+    session_id = parts[0]
+    platform = parts[1].lower()
+
     if platform not in storage.VALID_PLATFORMS:
         return f"Invalid platform. Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
-    
+
     userId = user_id_from_message(message)
+
+    if "-" in session_id:
+        # batch mode
+        try:
+            a = int(session_id.split("-")[0])
+            b = int(session_id.split("-")[1])
+        except ValueError:
+            return "Invalid session ID range. Please provide valid integers in the format `start-end`."
+        if a > b:
+            return "Invalid range. The first number must be less than or equal to the second."
+        while a <= b:
+            storage.set_platform_for_session(
+                userId=userId,
+                sessionId=a,
+                platform=platform
+            )
+            a += 1
+        return f"OK! Platform has been set to **{platform}** for sessions {session_id}"
+    
+    try:
+        session_id = int(session_id)
+    except ValueError:
+        return "Invalid session ID. Please provide a valid integer."
+
     return storage.set_platform_for_session(userId=userId, sessionId=session_id, platform=platform)
 
 def dm_receive(message) -> str:
@@ -166,3 +191,7 @@ def dm_receive(message) -> str:
         return dm_set_platform(message)
     else:
         return "Unknown command. Use `!help` to see available commands."
+    
+# IDEAS:
+# !reduce <session_id> <seconds> - Reduce the session time by a certain number of seconds
+# !add <session_id> <seconds> - Add a session with a specific game name and seconds
