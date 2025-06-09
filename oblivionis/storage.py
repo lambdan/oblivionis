@@ -39,11 +39,15 @@ class Activity(BaseModel):
     user = ForeignKeyField(User)
     game = ForeignKeyField(Game)
     seconds = IntegerField()
+    platform = CharField(default="pc", max_length=20)
 
 
 def connect_db():
     db.connect()
     db.create_tables([User, Game, Activity])
+    # Add platform column if it doesn't exist
+    db.execute_sql("ALTER TABLE activity ADD COLUMN IF NOT EXISTS platform VARCHAR(20) DEFAULT 'pc';")
+
 
 def remove_session(userId: int, sessionId: int):
     try:

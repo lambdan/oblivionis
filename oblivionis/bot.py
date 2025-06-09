@@ -20,7 +20,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
-def add_session(userId: str, userName: str, gameName: str, seconds: int, ts=now()) -> str:
+def add_session(userId: str, userName: str, gameName: str, seconds: int, platform = "pc", ts=now()) -> str:
     user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
     if user_created:
         logger.info("Added new user %s %s to database", userName, userId)
@@ -28,7 +28,7 @@ def add_session(userId: str, userName: str, gameName: str, seconds: int, ts=now(
     game, game_created = storage.Game.get_or_create(name=gameName)
     if game_created:
         logger.info("Added new game '%s' to database", game.name)
-    storage.Activity.create(user=user, game=game, seconds=seconds, timestamp=ts)
+    storage.Activity.create(user=user, game=game, seconds=seconds, timestamp=ts, platform=platform)
     
     msg = f"{userName} played {gameName} for {seconds} seconds"
 
