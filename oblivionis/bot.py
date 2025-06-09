@@ -21,6 +21,9 @@ def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
 def add_session(userId: str, userName: str, gameName: str, seconds: int, platform=None, ts=now()) -> str:
+    if seconds < 60:
+        logger.warning("Session for user %s on game %s is less than 60 seconds. Ignoring.", userName, gameName)
+        return "Session too short, ignoring."
     user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
     if user_created:
         logger.info("Added new user %s %s to database", userName, userId)
@@ -47,6 +50,12 @@ def game_from_activity(activity) -> str:
         return activity.details.removeprefix("Playing ")
     return activity.name
 
+def platform_from_activity(activity) -> str:
+    if activity.name == "Steam Deck":
+        return "steam-deck"
+    # TODO check for PS5?
+    return "pc"
+
 @bot.event
 async def on_guild_available(guild):
     logger.info("Server %s available", guild)
@@ -61,12 +70,12 @@ async def on_presence_update(before, after):
     if after.activity is None and before.activity.type == discord.ActivityType.playing:
         activity = before.activity
         duration = datetime.datetime.now(datetime.UTC) - activity.start
-        game_name = game_from_activity(activity)
         add_session(
             userId=before.id,
             userName=before.name,
-            gameName=game_name,
+            gameName=game_from_activity(activity),
             seconds=int(duration.total_seconds()),
+            platform=platform_from_activity(activity),
         )
     elif after.activity.type == discord.ActivityType.playing:
         logger.info("%s has started playing %s", after, game_from_activity(after.activity))
