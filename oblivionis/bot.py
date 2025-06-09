@@ -9,7 +9,7 @@ from oblivionis import storage
 from oblivionis.dm_features import dm_add_session, dm_help, dm_receive, dm_start_session, dm_stop_session
 
 logger = logging.getLogger("bot.py")
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 intents = discord.Intents.default()
 intents.presences = True

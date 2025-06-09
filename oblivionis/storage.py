@@ -1,7 +1,7 @@
 import os
 import logging
 logger = logging.getLogger("storage.py")
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 VALID_PLATFORMS = ["pc", "switch", "switch2", "ps1", "ps2", "ps3", "ps4", "ps5", "xbox", "xbox360", "xboxone", "xboxseries", "steam-deck", "nes", "snes", "n64", "gamecube", "wii", "wiiu", "ds", "3ds", "psp", "vita"]
 
