@@ -1,14 +1,15 @@
 import datetime
 import logging
-import os
+import os, json
 
 import discord
 from discord.ext import commands
 
 from oblivionis import storage
+from oblivionis.dm_features import dm_add_session, dm_help, dm_start_session, dm_stop_session
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 intents = discord.Intents.default()
 intents.presences = True
@@ -16,17 +17,10 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-def now():
+def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
-def add_session(userId, userName, gameName, seconds, ts=now()):
-    logger.info(
-            "%s has played %s for %s seconds at %s",
-            userName,
-            gameName,
-            seconds,
-            ts,
-        )
+def add_session(userId: str, userName: str, gameName: str, seconds: int, ts=now()) -> str:
     user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
     if user_created:
         logger.info("Added new user %s %s to database", userName, userId)
@@ -35,6 +29,11 @@ def add_session(userId, userName, gameName, seconds, ts=now()):
     if game_created:
         logger.info("Added new game '%s' to database", game.name)
     storage.Activity.create(user=user, game=game, seconds=seconds, timestamp=ts)
+    
+    msg = f"{userName} played {gameName} for {seconds} seconds"
+
+    logger.info(msg)
+    return msg
 
 def game_from_activity(activity) -> str:
     if activity.name == "Steam Deck":
@@ -70,6 +69,23 @@ async def on_presence_update(before, after):
 async def on_ready():
     logger.info("Oblivionis is ready")
 
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    
+    logger.info("Received message from %s: %s", message.author, message.content)
+
+    msg = dm_help()  # Default message if no command matches
+
+    if message.content.startswith("!add"):
+        msg = dm_add_session(message)
+    elif message.content.startswith("!start"):
+        msg = dm_start_session(message)
+    elif message.content.startswith("!stop"):
+        msg = dm_stop_session(message)
+
+    await message.author.send(msg)
 
 def main():
     storage.connect_db()
