@@ -6,9 +6,9 @@ import discord
 from discord.ext import commands
 
 from oblivionis import storage
-from oblivionis.dm_features import dm_add_session, dm_help, dm_start_session, dm_stop_session
+from oblivionis.dm_features import dm_add_session, dm_help, dm_receive, dm_start_session, dm_stop_session
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("bot.py")
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 intents = discord.Intents.default()
@@ -76,16 +76,7 @@ async def on_message(message):
     
     logger.info("Received message from %s: %s", message.author, message.content)
 
-    msg = dm_help()  # Default message if no command matches
-
-    if message.content.startswith("!add"):
-        msg = dm_add_session(message)
-    elif message.content.startswith("!start"):
-        msg = dm_start_session(message)
-    elif message.content.startswith("!stop"):
-        msg = dm_stop_session(message)
-
-    await message.author.send(msg)
+    await message.author.send(dm_receive(message))
 
 def main():
     storage.connect_db()
