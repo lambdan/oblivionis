@@ -4,17 +4,20 @@
 
 ### Added
 
-- Added bot dm functionality:
-    - `!add "game name" n` - would add n seconds to the specified game 
-        - This is useful if you played a game offline
-    - `!start "game name"` - manually start playing a game
-        - This is useful for platforms without Discord integration (Nintendo Switch...)
-    - `!stop` - stops the manually playing game
-    - `!remove id` - removes session with id
-        - ID can be seen in recent activity on your profile page for now
-    - `!merge 1 2` - merges game with id 1 into id 2 for your user
-        - This is useful if you play a game with many names, or you typo when starting a manual session
-
+- Added platform tracking
+    - Default will be "pc", and retroactively set
+- Sessions shorter than 60 seconds are discarded
+- Added bot dm functionality. DM the bot `!help` to see details.
+    - `!help`
+    - `!add "Game Name" n`
+    - `!start "Game Name"`
+    - `!stop`
+    - `!merge <game_id1> <game_id2>`
+    - `!remove <session_id>`
+    - `!platform`
+    - `!platform <name>`
+    - `!listplatforms` 
+    - `!setplatform <session_id> <platform>` 
     
 
 ## [0.2.0] - 2025-04-23

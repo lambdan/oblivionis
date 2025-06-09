@@ -99,3 +99,20 @@ def set_default_platform(userId: str, platform: str) -> str:
 
     except User.DoesNotExist:
         return f"ERROR: User {userId} not found"
+    
+def set_platform_for_session(userId: str, sessionId: int, platform: str) -> str:
+    if platform not in VALID_PLATFORMS:
+        return f"ERROR: Invalid platform. Valid platforms are: {', '.join(VALID_PLATFORMS)}"
+    
+    try:
+        user = User.get(User.id == userId)
+        activity = Activity.get(Activity.id == sessionId)
+        if activity.user != user:
+            return f"ERROR: Session {sessionId} does not belong to you"
+        activity.platform = platform
+        activity.save()
+        return f"Platform for session {sessionId} has been set to **{platform}**"
+    except User.DoesNotExist:
+        return f"ERROR: User {userId} not found"
+    except Activity.DoesNotExist:
+        return f"ERROR: Session {sessionId} not found"
