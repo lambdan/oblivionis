@@ -13,7 +13,28 @@ logging.basicConfig(level=logging.INFO)
 intents = discord.Intents.default()
 intents.presences = True
 intents.members = True
-bot = commands.Bot(command_prefix=commands.when_mentioned, intents=intents)
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+def now():
+    return datetime.datetime.now(datetime.UTC)
+
+def add_session(userId, userName, gameName, seconds, ts=now()):
+    logger.info(
+            "%s has played %s for %s seconds at %s",
+            userName,
+            gameName,
+            seconds,
+            ts,
+        )
+    user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
+    if user_created:
+        logger.info("Added new user %s %s to database", userName, userId)
+
+    game, game_created = storage.Game.get_or_create(name=gameName)
+    if game_created:
+        logger.info("Added new game '%s' to database", game.name)
+    storage.Activity.create(user=user, game=game, seconds=seconds, timestamp=ts)
 
 def game_from_activity(activity) -> str:
     if activity.name == "Steam Deck":
@@ -34,25 +55,15 @@ async def on_presence_update(before, after):
     if after.activity is None and before.activity.type == discord.ActivityType.playing:
         activity = before.activity
         duration = datetime.datetime.now(datetime.UTC) - activity.start
-        duration_seconds = round(duration.total_seconds())
-        logger.info(
-            "Member %s has stopped playing %s after %s seconds",
-            after,
-            game_from_activity(activity),
-            duration_seconds,
+        game_name = game_from_activity(activity)
+        add_session(
+            userId=before.id,
+            userName=before.name,
+            gameName=game_name,
+            seconds=int(duration.total_seconds()),
         )
-        user, user_created = storage.User.get_or_create(
-            id=before.id, defaults={"name": before.name}
-        )
-        if user_created:
-            logger.info("Added new user '%s' to database", before.name)
-
-        game, game_created = storage.Game.get_or_create(name=game_from_activity(activity))
-        if game_created:
-            logger.info("Added new game '%s' to database", game.name)
-        storage.Activity.create(user=user, game=game, seconds=duration_seconds)
     elif after.activity.type == discord.ActivityType.playing:
-        logger.info("Member %s has started playing %s", after, game_from_activity(after.activity))
+        logger.info("%s has started playing %s", after, game_from_activity(after.activity))
 
 
 @bot.event

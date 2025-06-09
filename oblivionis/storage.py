@@ -1,4 +1,3 @@
-import datetime
 import os
 
 from peewee import (
@@ -33,7 +32,7 @@ class Game(BaseModel):
 
 
 class Activity(BaseModel):
-    timestamp = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
+    timestamp = DateTimeField()
     user = ForeignKeyField(User)
     game = ForeignKeyField(Game)
     seconds = IntegerField()
