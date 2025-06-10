@@ -1,21 +1,10 @@
-from oblivionis import storage, bot
+from oblivionis import operations, utils
+from oblivionis.consts import VALID_PLATFORMS
+from oblivionis.storage import User
 import datetime
 
-MANUAL_SESSIONS = {}
-
-def user_id_from_message(message) -> int:
-    if message.author is None:
-        raise ValueError("Message author is None")
-    return message.author.id
-
-def user_name_from_message(message) -> str:
-    if message.author is None:
-        raise ValueError("Message author is None")
-    return message.author.name
-
-
 def dm_help() -> str:
-    return """Available commands:
+    return """
 # Help:
 - `!help` - Show this message
 
@@ -29,15 +18,30 @@ def dm_help() -> str:
 # Maintenance:
 - `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
 - `!remove <session_id>` - Remove session with id
-- `!moddate <session_id> <new_date>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
-
-# Platform:
-- `!platform` - Show your default platform
-- `!platform <name>` - Set your default platform
-- `!listplatforms` - List all valid platforms
+- `!setdate <session_id> <new_date>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 - `!setplatform <session_id> <platform>` - Set the platform for a specific session
 - `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
+
+# Platform:
+- `!platform` - Show your current default platform
+- `!platform <name>` - Set your default platform
+    - This is the platform used when platform cannot be automatically determined (e.g. manual sessions)
+- `!listplatforms` - List all valid platforms
 """
+
+
+
+MANUAL_SESSIONS = {}
+
+def user_id_from_message(message) -> int:
+    if message.author is None:
+        raise ValueError("Message author is None")
+    return message.author.id
+
+def user_name_from_message(message) -> str:
+    if message.author is None:
+        raise ValueError("Message author is None")
+    return message.author.name
 
 def dm_add_session(message) -> str:
     # !add "Game Name" seconds
@@ -51,7 +55,7 @@ def dm_add_session(message) -> str:
     except ValueError:
         return "Invalid seconds value. Please provide a valid integer."
     
-    return bot.add_session(userId=user_id_from_message(message),
+    return operations.add_session(userId=user_id_from_message(message),
                 userName=user_name_from_message(message),
                 gameName=gameName,
                 seconds=seconds)
@@ -80,7 +84,7 @@ def dm_stop_session(message) -> str:
     startTime = session["startTime"]
     duration = datetime.datetime.now(datetime.UTC) - startTime
     seconds = int(duration.total_seconds())
-    bot.add_session(userId=userId,
+    operations.add_session(userId=userId,
                 userName=user_name_from_message(message),
                 gameName=gameName,
                 seconds=seconds)
@@ -97,7 +101,7 @@ def dm_merge_game(message) -> str:
     except ValueError:
         return "Invalid game IDs. Please provide valid integers."
     userId = user_id_from_message(message)
-    return storage.merge_games(userId=userId, gameId1=game_id1, gameId2=game_id2)
+    return operations.merge_games(userId=userId, gameId1=game_id1, gameId2=game_id2)
 
 def dm_remove_session(message) -> str:
     # !remove session_id
@@ -110,12 +114,12 @@ def dm_remove_session(message) -> str:
     except ValueError:
         return "Invalid session ID"
     
-    return storage.remove_session(userId=user_id_from_message(message), sessionId=session_id)
+    return operations.remove_session(userId=user_id_from_message(message), sessionId=session_id)
 
 def dm_platform(message) -> str:
     userId = user_id_from_message(message)
     if message.content == "!platform":
-        user = storage.User.get_or_none(storage.User.id == userId)
+        user = User.get_or_none(User.id == userId)
         if user is None:
             return "User not found"
         return f"Your default platform is **{user.default_platform}**. Use `!platform <name>` to change it."
@@ -125,11 +129,11 @@ def dm_platform(message) -> str:
         return "Invalid command format. Use: `!platform <name>`"
     
     platform = parts[0].lower()
-    if platform not in storage.VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
+    if platform not in VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: `{', '.join(VALID_PLATFORMS)}`"
     
     userId = user_id_from_message(message)
-    return storage.set_default_platform(userId=userId, platform=platform)
+    return operations.set_default_platform(userId=userId, platform=platform)
 
 def dm_set_platform(message) -> str:
     # !setplatform <session_id> <platform>
@@ -137,12 +141,11 @@ def dm_set_platform(message) -> str:
     if len(parts) != 2:
         return "Invalid command format. Use: `!setplatform <session_id> <platform>`"
     
-
     session_id = parts[0]
     platform = parts[1].lower()
 
-    if platform not in storage.VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
+    if platform not in VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: `{', '.join(VALID_PLATFORMS)}`"
 
     userId = user_id_from_message(message)
 
@@ -156,7 +159,7 @@ def dm_set_platform(message) -> str:
         if a > b:
             return "Invalid range. The first number must be less than or equal to the second."
         while a <= b:
-            storage.set_platform_for_session(
+            operations.set_platform_for_session(
                 userId=userId,
                 sessionId=a,
                 platform=platform
@@ -169,22 +172,21 @@ def dm_set_platform(message) -> str:
     except ValueError:
         return "Invalid session ID. Please provide a valid integer."
 
-    return storage.set_platform_for_session(userId=userId, sessionId=session_id, platform=platform)
+    return operations.set_platform_for_session(userId=userId, sessionId=session_id, platform=platform)
 
-def dm_modify_date(message) -> str:
-    # !moddate <session_id> <new_date>
+def dm_set_date(message) -> str:
+    # !setdate <session_id> <new_date>
     parts = message.content[9:].split()
     if len(parts) != 2:
-        return "Invalid command format. Use `!moddate <session_id> <new_date>`, where `<new_date>` is in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)"
+        return "Invalid command format"
     
     if not parts[1].upper().endswith("Z"):
         return "Invalid date format. Please provide the date in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)"
     
     try:
         session_id = int(parts[0])
-        new_date_str = parts[1].upper()
-        new_date = datetime.datetime.fromisoformat(new_date_str.replace("Z", "+00:00"))
-        return storage.modify_session_date(
+        new_date = utils.datetimeFromISO8601(parts[1])
+        return operations.modify_session_date(
             userId=user_id_from_message(message),
             sessionId=session_id,
             new_date=new_date
@@ -209,14 +211,15 @@ def dm_receive(message) -> str:
     elif message.content.startswith("!platform"):
         return dm_platform(message)
     elif message.content.startswith("!listplatforms"):
-        return f"Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
+        return f"Valid platforms are:\n\n`{', '.join(VALID_PLATFORMS)}`"
     elif message.content.startswith("!setplatform"):
         return dm_set_platform(message)
-    elif message.content.startswith("!moddate"):
-        return dm_modify_date(message)
+    elif message.content.startswith("!setdate"):
+        return dm_set_date(message)
     else:
         return "Unknown command. Use `!help` to see available commands."
     
 # IDEAS:
 # !reduce <session_id> <seconds> - Reduce the session time by a certain number of seconds
 # !add <session_id> <seconds> - Add a session with a specific game name and seconds
+# !last - Show the last session

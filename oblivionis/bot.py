@@ -1,12 +1,13 @@
 import datetime
 import logging
-import os, json
+import os
 
 import discord
 from discord.ext import commands
 
 from oblivionis import storage
-from oblivionis.dm_features import dm_receive
+from oblivionis.commands import dm_receive
+from oblivionis.operations import add_session
 
 logger = logging.getLogger("bot.py")
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -17,34 +18,6 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-def now() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC)
-
-def add_session(userId: str, userName: str, gameName: str, seconds: int, platform:str=None, timestamp:datetime.datetime= None) -> str:
-    if seconds < 30:
-        logger.warning("Session for user %s on game %s is less than 30 seconds. Ignoring.", userName, gameName)
-        return "Session too short, ignoring."
-    
-    user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
-    if user_created:
-        logger.info("Added new user %s %s to database", userName, userId)
-
-    if platform is None:
-        # Get the user's default platform if not provided
-        platform = user.default_platform
-
-    if timestamp is None:
-        timestamp = now()
-
-    game, game_created = storage.Game.get_or_create(name=gameName)
-    if game_created:
-        logger.info("Added new game '%s' to database", game.name)
-    
-    storage.Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
-    
-    msg = f"{userName} played {gameName} for {seconds} seconds"
-    logger.info(msg)
-    return msg
 
 def game_from_activity(activity) -> str:
     if activity.name == "Steam Deck":
@@ -59,8 +32,8 @@ def platform_from_activity(activity) -> str:
     try:
         if activity.platform:
             return activity.platform.lower()
-    except:
-        logger.warning("Failed to get platform from activity %s %s", activity.name, activity.platform)
+    except Exception as e:
+        logger.warning("Failed to get platform from activity %s %s %s", activity.name, activity.platform, e)
     return "pc"
 
 @bot.event
@@ -77,16 +50,21 @@ async def on_presence_update(before, after):
     if after.activity is None and before.activity.type == discord.ActivityType.playing:
         activity = before.activity
         duration = datetime.datetime.now(datetime.UTC) - activity.start
-        logger.info("%s has stopped playing %s on %s after %s seconds", before, game_from_activity(activity), platform_from_activity(activity), duration.total_seconds())
+        seconds = int(duration.total_seconds())
+        game = game_from_activity(activity)
+        platform = platform_from_activity(activity)
+        logger.info("%s has stopped playing %s on %s after %s seconds", before, game, platform, seconds)
         add_session(
             userId=before.id,
             userName=before.name,
-            gameName=game_from_activity(activity),
-            seconds=int(duration.total_seconds()),
-            platform=platform_from_activity(activity),
+            gameName=game,
+            seconds=seconds,
+            platform=platform,
         )
     elif after.activity.type == discord.ActivityType.playing:
-        logger.info("%s has started playing %s on %s", after, game_from_activity(after.activity), platform_from_activity(after.activity))
+        game = game_from_activity(after.activity)
+        platform = platform_from_activity(after.activity)
+        logger.info("%s has started playing %s on %s", after, game, platform)
 
 
 @bot.event
@@ -97,10 +75,10 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
-    
-    logger.info("Received message from %s: %s", message.author, message.content)
-
-    await message.author.send(dm_receive(message))
+    logger.debug("Received message from %s: %s", message.author, message.content)
+    reply = dm_receive(message)
+    logger.debug("Replying to %s: %s", message.author, reply)
+    await message.author.send(reply)
 
 def main():
     storage.connect_db()
