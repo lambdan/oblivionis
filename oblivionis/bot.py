@@ -9,7 +9,7 @@ from oblivionis import storage
 from oblivionis.dm_features import dm_add_session, dm_help, dm_receive, dm_start_session, dm_stop_session
 
 logger = logging.getLogger("bot.py")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 intents = discord.Intents.default()
 intents.presences = True
@@ -31,9 +31,6 @@ def add_session(userId: str, userName: str, gameName: str, seconds: int, platfor
     if platform is None:
         # Get the user's default platform if not provided
         platform = user.default_platform
-    if platform not in storage.VALID_PLATFORMS:
-        logger.warning("Invalid platform '%s' for user %s. Defaulting to 'pc'.", platform, userName)
-        platform = "pc"
 
     game, game_created = storage.Game.get_or_create(name=gameName)
     if game_created:
@@ -51,9 +48,15 @@ def game_from_activity(activity) -> str:
     return activity.name
 
 def platform_from_activity(activity) -> str:
+    # https://discordpy.readthedocs.io/en/stable/api.html#discord.Game.platform
+    logger.debug("platform_from_activity: %s %s", activity.name, activity.platform)
     if activity.name == "Steam Deck":
         return "steam-deck"
-    # TODO check for PS5?
+    try:
+        if activity.platform:
+            return activity.platform.lower()
+    except:
+        logger.warning("Failed to get platform from activity %s %s", activity.name, activity.platform)
     return "pc"
 
 @bot.event
@@ -70,6 +73,7 @@ async def on_presence_update(before, after):
     if after.activity is None and before.activity.type == discord.ActivityType.playing:
         activity = before.activity
         duration = datetime.datetime.now(datetime.UTC) - activity.start
+        logger.info("%s has stopped playing %s on %s after %s seconds", before, game_from_activity(activity), platform_from_activity(activity), duration.total_seconds())
         add_session(
             userId=before.id,
             userName=before.name,
@@ -78,7 +82,7 @@ async def on_presence_update(before, after):
             platform=platform_from_activity(activity),
         )
     elif after.activity.type == discord.ActivityType.playing:
-        logger.info("%s has started playing %s", after, game_from_activity(after.activity))
+        logger.info("%s has started playing %s on %s", after, game_from_activity(after.activity), platform_from_activity(after.activity))
 
 
 @bot.event
