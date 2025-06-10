@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4] - 2025-06-10
+
+### Added
+
+- Added `!last` command
+- `!add` can now take duration in a variety of formats, and an optional timestamp
+
 ## [0.3.3] - 2025-06-10
 
 ### Added
