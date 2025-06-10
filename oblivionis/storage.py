@@ -117,3 +117,15 @@ def set_platform_for_session(userId: str, sessionId: int, platform: str) -> str:
         return f"ERROR: User {userId} not found"
     except Activity.DoesNotExist:
         return f"ERROR: Session {sessionId} not found"
+    
+def modify_session_date(userId: str, sessionId: int, new_date: datetime.datetime) -> str:
+    try:
+        user = User.get(User.id == userId)
+        activity = Activity.get(Activity.id == sessionId)
+        if activity.user != user:
+            return f"ERROR: Session {sessionId} does not belong to you"
+        activity.timestamp = new_date
+        activity.save()
+        return f"Session {sessionId} date has been modified to {new_date.strftime('%Y-%m-%d %H:%M:%S')}"
+    except Exception as e:
+        return f"ERROR: {str(e)}"

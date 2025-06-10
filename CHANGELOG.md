@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.3] - 2025-06-10
+
+### Added
+
+- Added `!moddate` command. Lets you retroactively change date of a session.
+
+### Bug Fixes
+
+- Timestamp functionality restored to 0.3.1, but with bug fixed.
+
 ## [0.3.2] - 2025-06-10
 
 ### Added

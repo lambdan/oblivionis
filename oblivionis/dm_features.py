@@ -29,6 +29,7 @@ def dm_help() -> str:
 # Maintenance:
 - `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
 - `!remove <session_id>` - Remove session with id
+- `!moddate <session_id> <new_date>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 
 # Platform:
 - `!platform` - Show your default platform
@@ -170,6 +171,28 @@ def dm_set_platform(message) -> str:
 
     return storage.set_platform_for_session(userId=userId, sessionId=session_id, platform=platform)
 
+def dm_modify_date(message) -> str:
+    # !moddate <session_id> <new_date>
+    parts = message.content[9:].split()
+    if len(parts) != 2:
+        return "Invalid command format. Use `!moddate <session_id> <new_date>`, where `<new_date>` is in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)"
+    
+    if not parts[1].upper().endswith("Z"):
+        return "Invalid date format. Please provide the date in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)"
+    
+    try:
+        session_id = int(parts[0])
+        new_date_str = parts[1].upper()
+        new_date = datetime.datetime.fromisoformat(new_date_str.replace("Z", "+00:00"))
+        return storage.modify_session_date(
+            userId=user_id_from_message(message),
+            sessionId=session_id,
+            new_date=new_date
+        )
+    except Exception as e:
+        return f"ERROR occurred: {e}"
+
+
 def dm_receive(message) -> str:
     if message.content.startswith("!help"):
         return dm_help()
@@ -189,6 +212,8 @@ def dm_receive(message) -> str:
         return f"Valid platforms are: `{', '.join(storage.VALID_PLATFORMS)}`"
     elif message.content.startswith("!setplatform"):
         return dm_set_platform(message)
+    elif message.content.startswith("!moddate"):
+        return dm_modify_date(message)
     else:
         return "Unknown command. Use `!help` to see available commands."
     
