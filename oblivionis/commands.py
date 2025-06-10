@@ -90,7 +90,7 @@ def dm_start_session(message) -> str:
         return 'You already have a manual session running. Please `!stop` before starting a new one.'
     MANUAL_SESSIONS[userId] = {
         "gameName": gameName,
-        "startTime": datetime.datetime.now(datetime.UTC),
+        "startTime": utils.now()
     }
     return f"You have started playing **{gameName}**. Use `!stop` to end the session."
 
@@ -102,7 +102,7 @@ def dm_stop_session(message) -> str:
     session = MANUAL_SESSIONS.pop(userId)
     gameName = session["gameName"]
     startTime = session["startTime"]
-    duration = datetime.datetime.now(datetime.UTC) - startTime
+    duration = utils.now() - startTime
     seconds = int(duration.total_seconds())
     operations.add_session(userId=userId,
                 userName=user_name_from_message(message),
