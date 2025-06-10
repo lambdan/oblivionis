@@ -1,3 +1,4 @@
+import re
 from oblivionis import operations, utils
 from oblivionis.consts import VALID_PLATFORMS
 from oblivionis.storage import User, Activity
@@ -8,21 +9,26 @@ def dm_help() -> str:
 # Help:
 - `!help` - Show this message
 
-# Retroactive entry:
-- `!add "Game Name" n` - Add a session of n seconds (timestamp will be now)
+# Manual addition:
+- `!add "Game Name" <duration> [datetime]` - Add a session of specified duration
+    - Duration can be one of these formats:
+        - `123` (eg `!add "Game Name" 3600`)
+        - `HH:MM:SS` (eg `!add "Game Name" 01:00:00`)
+        - `XXhYYmZZs` (eg `!add "Game Name" 1h30m15s`)
+    - If datetime is not provided, current time is used
+        - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 
 # Manual start/stop:
 - `!start "Game Name"` - Start a manual session
 - `!stop` - Stop the current manually started session
 
 # Sessions:
-- `!last` - Shows your last session
-- `!last n` - Shows your last n sessions (up to 10)
+- `!last [n]` - Shows your last n sessions (default is 1, max is 10)
 
 # Maintenance:
 - `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
 - `!remove <session_id>` - Remove session with id
-- `!setdate <session_id> <new_date>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
+- `!setdate <session_id> <datetime>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 - `!setplatform <session_id> <platform>` - Set the platform for a specific session
 - `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
 
@@ -32,8 +38,6 @@ def dm_help() -> str:
     - This is the platform used when platform cannot be automatically determined (e.g. manual sessions)
 - `!listplatforms` - List all valid platforms
 """
-
-
 
 MANUAL_SESSIONS = {}
 
@@ -48,21 +52,33 @@ def user_name_from_message(message) -> str:
     return message.author.name
 
 def dm_add_session(message) -> str:
-    # !add "Game Name" seconds
-    parts = message.content[5:].rsplit(" ", 1)
-    if len(parts) != 2:
-        return 'Invalid command. Use: `!add "Game Name" seconds`'
-    
-    gameName = parts[0].strip('"')
+    # !add "Game Name" <duration> [timestamp]
+    matches = [m[1] for m in re.findall(r'(["\'])(.*?)\1', message.content)]
+    gameName = matches[0] if matches else None
+    if not gameName:
+        return 'ERROR: Could not extract game name'
+
+    parts = message.content.split(" ")
+
     try:
-        seconds = int(parts[1])
-    except ValueError:
-        return "Invalid seconds value. Please provide a valid integer."
+        timestamp = None
+        duration = None
+        last = parts.pop() # This is the timestamp if provided
+        if last.upper().endswith("Z"):
+            timestamp = utils.datetimeFromISO8601(last)
+            duration = utils.secsFromString(parts.pop())
+        else:
+            duration = utils.secsFromString(last)
+        
+        if duration < 0:
+            return "Duration is invalid"
     
-    return operations.add_session(userId=user_id_from_message(message),
-                userName=user_name_from_message(message),
-                gameName=gameName,
-                seconds=seconds)
+        return operations.add_session(userId=user_id_from_message(message),
+                    userName=user_name_from_message(message),
+                    gameName=gameName,
+                    seconds=duration, timestamp=timestamp)
+    except:
+        return "Something went wrong. Double check your command format"
 
 def dm_start_session(message) -> str:
     # !start "Game Name"

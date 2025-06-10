@@ -30,7 +30,7 @@ def add_session(userId: str, userName: str, gameName: str, seconds: int, platfor
     
     storage.Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
     
-    msg = f"{userName} played {gameName} for {seconds} seconds"
+    msg = f"{userName} played {gameName} ({platform}) for {utils.secsToHHMMSS(seconds)} at {timestamp.isoformat()}"
     logger.info(msg)
     return msg
 
