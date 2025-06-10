@@ -1,3 +1,4 @@
+import datetime
 import os
 import logging
 logger = logging.getLogger("storage.py")
@@ -38,7 +39,7 @@ class Game(BaseModel):
 
 
 class Activity(BaseModel):
-    timestamp = DateTimeField()
+    timestamp = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
     user = ForeignKeyField(User)
     game = ForeignKeyField(Game)
     seconds = IntegerField()

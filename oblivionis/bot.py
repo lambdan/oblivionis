@@ -20,7 +20,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
-def add_session(userId: str, userName: str, gameName: str, seconds: int, platform=None, ts=now()) -> str:
+def add_session(userId: str, userName: str, gameName: str, seconds: int, platform=None) -> str:
     if seconds < 60:
         logger.warning("Session for user %s on game %s is less than 60 seconds. Ignoring.", userName, gameName)
         return "Session too short, ignoring."
@@ -35,7 +35,7 @@ def add_session(userId: str, userName: str, gameName: str, seconds: int, platfor
     game, game_created = storage.Game.get_or_create(name=gameName)
     if game_created:
         logger.info("Added new game '%s' to database", game.name)
-    storage.Activity.create(user=user, game=game, seconds=seconds, timestamp=ts, platform=platform)
+    storage.Activity.create(user=user, game=game, seconds=seconds, platform=platform)
     
     msg = f"{userName} played {gameName} for {seconds} seconds"
 

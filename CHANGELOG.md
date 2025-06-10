@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2] - 2025-06-10
+
+### Added
+
+- Read platform from `activity.platform` if possible
+
+### Bug Fixes
+
+- Timestamp of session was not being updated. Reverted behavior
+
 ## [0.3.1] - 2025-06-09
 
 ### Added
