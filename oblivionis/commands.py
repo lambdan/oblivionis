@@ -1,6 +1,6 @@
 from oblivionis import operations, utils
 from oblivionis.consts import VALID_PLATFORMS
-from oblivionis.storage import User
+from oblivionis.storage import User, Activity
 import datetime
 
 def dm_help() -> str:
@@ -14,6 +14,10 @@ def dm_help() -> str:
 # Manual start/stop:
 - `!start "Game Name"` - Start a manual session
 - `!stop` - Stop the current manually started session
+
+# Sessions:
+- `!last` - Shows your last session
+- `!last n` - Shows your last n sessions (up to 10)
 
 # Maintenance:
 - `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
@@ -88,7 +92,7 @@ def dm_stop_session(message) -> str:
                 userName=user_name_from_message(message),
                 gameName=gameName,
                 seconds=seconds)
-    return f"You played **{gameName}** for {seconds} seconds!"
+    return f"You played **{gameName}** for {utils.secsToHHMMSS(seconds)} seconds!"
 
 def dm_merge_game(message) -> str:
     # !merge 123 456 # Merge game with ID 123 into game with ID 456
@@ -194,6 +198,27 @@ def dm_set_date(message) -> str:
     except Exception as e:
         return f"ERROR occurred: {e}"
 
+def dm_last_sessions(message) -> str:
+    # !last
+    # !last n
+    userId = user_id_from_message(message)
+    splitted = message.content.split()
+    amount = 1
+    if len(splitted) == 2:
+        amount = min(int(splitted[1]), 10)
+    try:
+        sessions = Activity.select().where(Activity.user == User.get(User.id == userId)).order_by(Activity.timestamp.desc()).limit(amount)
+        lines = []
+        for session in sessions:
+            lines.append(f"#{session.id}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform})\t{utils.secsToHHMMSS(session.seconds)}")
+        out = "```\n"
+        out += "\n".join(reversed(lines))
+        out += "```"
+        return out
+    except Activity.DoesNotExist:
+        return "You have no sessions recorded."
+    except User.DoesNotExist:
+        return "User not found."
 
 def dm_receive(message) -> str:
     if message.content.startswith("!help"):
@@ -216,10 +241,11 @@ def dm_receive(message) -> str:
         return dm_set_platform(message)
     elif message.content.startswith("!setdate"):
         return dm_set_date(message)
+    elif message.content.startswith("!last"):
+        return dm_last_sessions(message)
     else:
         return "Unknown command. Use `!help` to see available commands."
     
 # IDEAS:
 # !reduce <session_id> <seconds> - Reduce the session time by a certain number of seconds
 # !add <session_id> <seconds> - Add a session with a specific game name and seconds
-# !last - Show the last session
