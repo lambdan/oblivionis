@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from oblivionis import storage
-from oblivionis.dm_features import dm_add_session, dm_help, dm_receive, dm_start_session, dm_stop_session
+from oblivionis.dm_features import dm_receive
 
 logger = logging.getLogger("bot.py")
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -20,10 +20,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
-def add_session(userId: str, userName: str, gameName: str, seconds: int, platform=None) -> str:
-    if seconds < 60:
-        logger.warning("Session for user %s on game %s is less than 60 seconds. Ignoring.", userName, gameName)
+def add_session(userId: str, userName: str, gameName: str, seconds: int, platform:str=None, timestamp:datetime.datetime= None) -> str:
+    if seconds < 30:
+        logger.warning("Session for user %s on game %s is less than 30 seconds. Ignoring.", userName, gameName)
         return "Session too short, ignoring."
+    
     user, user_created = storage.User.get_or_create(id=userId, defaults={"name": userName})
     if user_created:
         logger.info("Added new user %s %s to database", userName, userId)
@@ -32,13 +33,16 @@ def add_session(userId: str, userName: str, gameName: str, seconds: int, platfor
         # Get the user's default platform if not provided
         platform = user.default_platform
 
+    if timestamp is None:
+        timestamp = now()
+
     game, game_created = storage.Game.get_or_create(name=gameName)
     if game_created:
         logger.info("Added new game '%s' to database", game.name)
-    storage.Activity.create(user=user, game=game, seconds=seconds, platform=platform)
+    
+    storage.Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
     
     msg = f"{userName} played {gameName} for {seconds} seconds"
-
     logger.info(msg)
     return msg
 
