@@ -1,19 +1,29 @@
 import datetime
+import logging
+
+logger = logging.getLogger("utils")
 
 def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.UTC)
 
-def datetimeFromISO8601(s: str) -> datetime.datetime:
-    s = s.upper().strip()
-    return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+def datetimeFromISO8601(s: str) -> datetime.datetime | None:
+    try:
+        s = s.upper().strip()
+        return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except Exception as e:
+        return None
 
-def secsToHHMMSS(secs: int) -> str:
-    if secs < 0:
-        return "00:00:00"
-    hours = secs // 3600
-    minutes = (secs % 3600) // 60
-    seconds = secs % 60
-    return f"{hours:02}h{minutes:02}m{seconds:02}s"
+def secsToHHMMSS(secs: int) -> str | None:
+    try:
+        if secs < 0:
+            return "00:00:00"
+        hours = secs // 3600
+        minutes = (secs % 3600) // 60
+        seconds = secs % 60
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+    except Exception as e:
+        logger.error("Error converting seconds to HH:MM:SS format: %s", e)
+        return None
 
 def secsFromString(s: str) -> int:
     """

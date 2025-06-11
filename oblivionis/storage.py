@@ -1,8 +1,9 @@
 import datetime
 import os
 import logging
-logger = logging.getLogger("storage.py")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+from oblivionis.globals import LOGLEVEL
+
+logger = logging.getLogger("storage")
 
 from peewee import (
     CharField,
@@ -45,9 +46,21 @@ class Activity(BaseModel):
     seconds = IntegerField()
     platform = CharField(default="pc", max_length=20)
 
+def game_from_id(gameId: int) -> Game | None:
+    return Game.get_or_none(Game.id == gameId)
+    
+def game_from_name(gameName: str) -> Game | None:
+    return Game.get_or_none(Game.name == gameName)
+
+def activity_from_id(sessionId: int) -> Activity | None:
+    return Activity.get_or_none(Activity.id == sessionId)
+
+def user_from_id(userId: str) -> User | None:
+    return User.get_or_none(User.id == userId)
 
 def connect_db():
-    db.connect()
+    if db.connect():
+        logger.info("Connected to database %s", db.database)
     db.create_tables([User, Game, Activity])
     with db.atomic():
         # Add platform column if it doesn't exist

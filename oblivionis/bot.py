@@ -3,10 +3,15 @@ import discord
 from discord.ext import commands
 from oblivionis import storage
 from oblivionis.commands import dm_receive
-from oblivionis.operations import add_session
+from oblivionis.operations import add_session, get_or_create_user
+from oblivionis.globals import DEBUG, LOGLEVEL
 
-logger = logging.getLogger("bot.py")
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+if DEBUG:
+    print("**************************")
+    print("*** DEBUG MODE ENABLED ***")
+    print("**************************")
+
+logger = logging.getLogger("bot")
 
 intents = discord.Intents.default()
 intents.presences = True
@@ -56,11 +61,14 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
             logger.warning("No game found in activity %s", activity)
             return
         
+        user = get_or_create_user(str(before.id), before.name)
+        if not user:
+            return
+        
         platform = platform_from_activity(activity)
         logger.info("%s has stopped playing %s on %s after %s seconds", before, game, platform, seconds)
         add_session(
-            userId=str(before.id),
-            userName=before.name,
+            user=user,
             gameName=game,
             seconds=seconds,
             platform=platform,
@@ -80,6 +88,14 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
+    
+    # ! in prod
+    # !! while developing
+    if message.content.startswith("!!"):
+        if not DEBUG:
+            return
+        message.content = message.content[1:]
+
     try:
         logger.info("Received message from %s: %s", message.author, message.content)
         reply = dm_receive(message)
