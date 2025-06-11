@@ -33,10 +33,12 @@ class User(BaseModel):
 
 
 class Game(BaseModel):
+    id = IntegerField(primary_key=True)
     name = CharField(unique=True)
 
 
 class Activity(BaseModel):
+    id = IntegerField(primary_key=True)
     timestamp = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
     user = ForeignKeyField(User)
     game = ForeignKeyField(Game)

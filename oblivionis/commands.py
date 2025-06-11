@@ -1,7 +1,7 @@
 import re
-from oblivionis import operations, utils
-from oblivionis.consts import VALID_PLATFORMS
-from oblivionis.storage import User, Activity
+
+import discord
+from oblivionis import operations, utils, storage, consts
 import datetime
 
 def dm_help() -> str:
@@ -41,17 +41,24 @@ def dm_help() -> str:
 
 MANUAL_SESSIONS = {}
 
-def user_id_from_message(message) -> int:
+def user_id_from_message(message: discord.Message) -> int:
     if message.author is None:
         raise ValueError("Message author is None")
     return message.author.id
 
-def user_name_from_message(message) -> str:
+def user_name_from_message(message: discord.Message) -> str:
     if message.author is None:
         raise ValueError("Message author is None")
     return message.author.name
 
-def dm_add_session(message) -> str:
+def user_from_message(message: discord.Message) -> storage.User:
+    userId = user_id_from_message(message)
+    user = storage.User.get_or_none(storage.User.id == userId)
+    if user is None:
+        raise ValueError(f"User with ID {userId} not found")
+    return user
+
+def dm_add_session(message: discord.Message) -> str:
     # !add "Game Name" <duration> [timestamp]
     matches = [m[1] for m in re.findall(r'(["\'])(.*?)\1', message.content)]
     gameName = matches[0] if matches else None
@@ -73,14 +80,15 @@ def dm_add_session(message) -> str:
         if duration < 0:
             return "Duration is invalid"
     
-        return operations.add_session(userId=user_id_from_message(message),
+        return operations.add_session(
+                    userId=str(user_id_from_message(message)),
                     userName=user_name_from_message(message),
                     gameName=gameName,
                     seconds=duration, timestamp=timestamp)
     except:
         return "Something went wrong. Double check your command format"
 
-def dm_start_session(message) -> str:
+def dm_start_session(message: discord.Message) -> str:
     # !start "Game Name"
     userId = user_id_from_message(message)
     gameName = message.content[7:].strip('"')
@@ -94,7 +102,7 @@ def dm_start_session(message) -> str:
     }
     return f"You have started playing **{gameName}**. Use `!stop` to end the session."
 
-def dm_stop_session(message) -> str:
+def dm_stop_session(message: discord.Message) -> str:
     # !stop
     userId = user_id_from_message(message)
     if userId not in MANUAL_SESSIONS:
@@ -104,13 +112,14 @@ def dm_stop_session(message) -> str:
     startTime = session["startTime"]
     duration = utils.now() - startTime
     seconds = int(duration.total_seconds())
-    operations.add_session(userId=userId,
+    operations.add_session(
+                userId=str(userId),
                 userName=user_name_from_message(message),
                 gameName=gameName,
                 seconds=seconds)
     return f"You played **{gameName}** for {utils.secsToHHMMSS(seconds)} seconds!"
 
-def dm_merge_game(message) -> str:
+def dm_merge_game(message: discord.Message) -> str:
     # !merge 123 456 # Merge game with ID 123 into game with ID 456
     parts = message.content[7:].split()
     if len(parts) != 2:
@@ -123,7 +132,7 @@ def dm_merge_game(message) -> str:
     userId = user_id_from_message(message)
     return operations.merge_games(userId=userId, gameId1=game_id1, gameId2=game_id2)
 
-def dm_remove_session(message) -> str:
+def dm_remove_session(message: discord.Message) -> str:
     # !remove session_id
     parts = message.content[8:].split()
     if len(parts) != 1:
@@ -136,10 +145,10 @@ def dm_remove_session(message) -> str:
     
     return operations.remove_session(userId=user_id_from_message(message), sessionId=session_id)
 
-def dm_platform(message) -> str:
+def dm_platform(message: discord.Message) -> str:
     userId = user_id_from_message(message)
     if message.content == "!platform":
-        user = User.get_or_none(User.id == userId)
+        user = storage.User.get_or_none(storage.User.id == userId)
         if user is None:
             return "User not found"
         return f"Your default platform is **{user.default_platform}**. Use `!platform <name>` to change it."
@@ -149,13 +158,13 @@ def dm_platform(message) -> str:
         return "Invalid command format. Use: `!platform <name>`"
     
     platform = parts[0].lower()
-    if platform not in VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(VALID_PLATFORMS)}`"
+    if platform not in consts.VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
     
     userId = user_id_from_message(message)
-    return operations.set_default_platform(userId=userId, platform=platform)
+    return operations.set_default_platform(userId=str(userId), platform=platform)
 
-def dm_set_platform(message) -> str:
+def dm_set_platform(message: discord.Message) -> str:
     # !setplatform <session_id> <platform>
     parts = message.content[13:].split()
     if len(parts) != 2:
@@ -164,8 +173,8 @@ def dm_set_platform(message) -> str:
     session_id = parts[0]
     platform = parts[1].lower()
 
-    if platform not in VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(VALID_PLATFORMS)}`"
+    if platform not in consts.VALID_PLATFORMS:
+        return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
 
     userId = user_id_from_message(message)
 
@@ -180,7 +189,7 @@ def dm_set_platform(message) -> str:
             return "Invalid range. The first number must be less than or equal to the second."
         while a <= b:
             operations.set_platform_for_session(
-                userId=userId,
+                userId=str(userId),
                 sessionId=a,
                 platform=platform
             )
@@ -192,9 +201,9 @@ def dm_set_platform(message) -> str:
     except ValueError:
         return "Invalid session ID. Please provide a valid integer."
 
-    return operations.set_platform_for_session(userId=userId, sessionId=session_id, platform=platform)
+    return operations.set_platform_for_session(userId=str(userId), sessionId=session_id, platform=platform)
 
-def dm_set_date(message) -> str:
+def dm_set_date(message: discord.Message) -> str:
     # !setdate <session_id> <new_date>
     parts = message.content[9:].split()
     if len(parts) != 2:
@@ -207,14 +216,14 @@ def dm_set_date(message) -> str:
         session_id = int(parts[0])
         new_date = utils.datetimeFromISO8601(parts[1])
         return operations.modify_session_date(
-            userId=user_id_from_message(message),
+            userId=str(user_id_from_message(message)),
             sessionId=session_id,
             new_date=new_date
         )
     except Exception as e:
         return f"ERROR occurred: {e}"
 
-def dm_last_sessions(message) -> str:
+def dm_last_sessions(message: discord.Message) -> str:
     # !last
     # !last n
     userId = user_id_from_message(message)
@@ -223,7 +232,7 @@ def dm_last_sessions(message) -> str:
     if len(splitted) == 2:
         amount = min(int(splitted[1]), 10)
     try:
-        sessions = Activity.select().where(Activity.user == User.get(User.id == userId)).order_by(Activity.timestamp.desc()).limit(amount)
+        sessions = storage.Activity.select().where(storage.Activity.user == storage.User.get(storage.User.id == userId)).order_by(storage.Activity.timestamp.desc()).limit(amount)
         lines = []
         for session in sessions:
             lines.append(f"#{session.id}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform})\t{utils.secsToHHMMSS(session.seconds)}")
@@ -231,12 +240,10 @@ def dm_last_sessions(message) -> str:
         out += "\n".join(reversed(lines))
         out += "```"
         return out
-    except Activity.DoesNotExist:
-        return "You have no sessions recorded."
-    except User.DoesNotExist:
-        return "User not found."
+    except Exception as e:
+        return f"ERROR: {e}"
 
-def dm_receive(message) -> str:
+def dm_receive(message: discord.Message) -> str:
     if message.content.startswith("!help"):
         return dm_help()
     elif message.content.startswith("!add"):
@@ -252,7 +259,7 @@ def dm_receive(message) -> str:
     elif message.content.startswith("!platform"):
         return dm_platform(message)
     elif message.content.startswith("!listplatforms"):
-        return f"Valid platforms are:\n\n`{', '.join(VALID_PLATFORMS)}`"
+        return f"Valid platforms are:\n\n`{', '.join(consts.VALID_PLATFORMS)}`"
     elif message.content.startswith("!setplatform"):
         return dm_set_platform(message)
     elif message.content.startswith("!setdate"):

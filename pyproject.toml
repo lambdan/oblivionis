@@ -1,14 +1,15 @@
 [project]
 name = "oblivionis"
-version = "0.3.4"
+version = "0.3.0"
 description = "Discord bot for tracking gameplay time"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "audioop-lts; python_version>='3.13'",  # Needed for Discord.py with Python 3.13 for the time being.
-    "discord.py>=2.4,<3",
-    "peewee>=3.17.8,<4",
+    "discord.py==2.5.2",
+    "peewee==3.18.1",
     "psycopg2-binary>=2.9.10,<3",
+    "types-peewee==3.18.1.20250601"
 ]
 
 [project.scripts]
