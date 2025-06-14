@@ -38,10 +38,10 @@ def add_session(user: storage.User, gameName: str, seconds: int, platform:str|No
         return None, ValueError("Session must be at least {MINIMUM_SESSION_LENGTH} seconds long")
     
     try:
-        if platform is None:
+        if platform is None: # Use default platform if not provided
             platform = str(user.default_platform)
 
-        if timestamp is None:
+        if timestamp is None: # Use current time if not provided
             timestamp = utils.now()
 
         game = get_or_create_game(gameName)

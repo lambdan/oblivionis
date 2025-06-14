@@ -4,9 +4,15 @@ import logging
 logger = logging.getLogger("utils")
 
 def now() -> datetime.datetime:
+    """
+    Shortcut for current time in UTC
+    """
     return datetime.datetime.now(datetime.UTC)
 
 def datetimeFromISO8601(s: str) -> datetime.datetime | None:
+    """
+    Parses an datetime from a JS-like ISO8601 string (`YYYY-MM-DDTHH:MM:SSZ`)
+    """
     try:
         s = s.upper().strip()
         return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
@@ -14,9 +20,12 @@ def datetimeFromISO8601(s: str) -> datetime.datetime | None:
         return None
 
 def secsToHHMMSS(secs: int) -> str | None:
+    """
+    Returns a string in HH:MM:SS format
+    """
+    if secs < 0:
+        return None
     try:
-        if secs < 0:
-            return "00:00:00"
         hours = secs // 3600
         minutes = (secs % 3600) // 60
         seconds = secs % 60

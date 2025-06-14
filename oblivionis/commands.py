@@ -295,7 +295,6 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
 
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
-    discordUserName = message.author.name 
     user = user_from_message(message)
     if user is None:
         logger.error("Could not get Oblivionis User for message: %s", message)
