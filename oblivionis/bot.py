@@ -88,6 +88,9 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
+    if message.guild:
+        # Ignore messages in channels
+        return
     
     # ! in prod
     # !! while developing
@@ -96,14 +99,17 @@ async def on_message(message: discord.Message):
             return
         message.content = message.content[1:]
 
+    reply = None
+
     try:
         logger.info("Received message from %s: %s", message.author, message.content)
         reply = dm_receive(message)
-        logger.info("Replying to %s: %s", message.author, reply)
-        await message.author.send(reply)
     except Exception as e:
         logger.error("Error processing message from %s: %s", message.author, e)
-        await message.author.send(f"Error: {e}")
+        reply = f"Error processing your message"
+    
+    logger.info("Replying to %s: %s", message.author, reply)
+    await message.author.send(reply, reference=message)
 
 def main():
     storage.connect_db()
