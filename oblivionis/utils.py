@@ -25,45 +25,50 @@ def secsToHHMMSS(secs: int) -> str | None:
         logger.error("Error converting seconds to HH:MM:SS format: %s", e)
         return None
 
-def secsFromString(s: str) -> int:
+def secsFromString(s: str) -> int | None:
     """
-    Returns -1 on error
+    Turns a duration string into seconds.
+    Supported formats:
+    - HH:MM:SS (e.g., 01:30:45)
+    - HhMmSs (e.g., 1h30m45s)
+    - Just a number (e.g., 3600 = 1 hour)
+    Returns None on error
     """
-    # is it a number? then its seconds
-    if s.isdigit():
-        return int(s)
+    try:
+        s = s.strip().lower().replace(" ", "")
+        if ":" in s:
+            parts = s.split(":")
+            if len(parts) != 3:
+                return None
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = int(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        elif "h" in s or "m" in s or "s" in s:
+            hours = minutes = seconds = 0
+            if "h" in s:
+                hours = int(s.split("h")[0])
+            if "m" in s:
+                minutes = int(s.split("m")[0].split("h")[-1])
+            if "s" in s:
+                seconds = int(s.split("s")[0].split("m")[-1])
+            return hours * 3600 + minutes * 60 + seconds
+        else:
+            return int(s)
+    except Exception as e:
+        logger.error("Error parsing duration string '%s': %s", s, e)
+        return None
 
-    # is it HH:MM:SS?
-    if ":" in s:
-        parts = s.split(":")
-        for p in parts:
-            if not p.isdigit():
-                return -1
-        try:
-            hrs = int(parts[0])
-            if hrs < 0:
-                return -1
-            mins = int(parts[1])
-            if mins < 0 or mins > 59:
-                return -1
-            secs = int(parts[2])
-            if secs < 0 or secs > 59:
-                return -1
-            return (hrs * 3600) + (mins * 60) + secs
-        except: 
-            return -1
-
-    # is it in the format "XhYmZs"?
-    s = s.strip().lower().replace(" ", "")
-    parts = s.split("h")
-    if len(parts) == 2:
-        hours = int(parts[0])
-        parts = parts[1].split("m")
-        minutes = int(parts[0])
-        seconds = int(parts[1].replace("s", ""))
-    else:
-        hours = 0
-        parts = s.split("m")
-        minutes = int(parts[0])
-        seconds = int(parts[1].replace("s", ""))
-    return hours * 3600 + minutes * 60 + seconds
+def parseRange(s: str) -> tuple[int, int] | None:
+    """ 
+    Attempts to parse a range in the format a-b
+    """
+    try:
+        parts = s.split("-")
+        if len(parts) != 2:
+            return None
+        start = int(parts[0])
+        end = int(parts[1])
+        return (start, end)
+    except Exception as e:
+        return None

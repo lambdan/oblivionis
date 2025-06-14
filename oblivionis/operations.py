@@ -73,6 +73,13 @@ def merge_games(user: storage.User, gameId1: int, gameId2: int):
     ).execute()
     return f"Game '{game1.name}' merged into '{game2.name}' successfully for your user"
 
+def set_game_for_activity(activity: storage.Activity, newGame: storage.Game) -> str:
+    if activity.game == newGame:
+        return f"Activity {activity.id} is already set to game {newGame.name}"
+    oldGame = activity.game
+    Activity.update(game=newGame).where(Activity.id == activity.id).execute()
+    return f"Activity {activity.id} has been changed from **{oldGame} to game **{newGame.name}**"
+
 def set_default_platform(user: storage.User, platform: str) -> str:
     user.default_platform = platform # type: ignore
     user.save()

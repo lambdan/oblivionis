@@ -33,9 +33,18 @@ def dm_help() -> str:
 # Maintenance:
 - `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
 - `!remove <session_id>` - Remove session with id
+
+## Date:
 - `!setdate <session_id> <datetime>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
+
+## Platform: 
 - `!setplatform <session_id> <platform>` - Set the platform for a specific session
 - `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
+
+## Game:
+- `!setgame <session_id> "Game Name" - Change the game of a specific session
+    - This is useful if your session shows up as an emulator, and you would like to change it to the actual game you played
+- `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
 
 # Platform:
 - `!platform` - Show your current default platform
@@ -80,10 +89,10 @@ def dm_add_session(user: storage.User, message: str) -> str:
         duration = utils.secsFromString(parts.pop())
     else:
         duration = utils.secsFromString(last)
+
+    if duration is None:
+        return "ERROR: Duration is invalid"
     
-    if duration < 0:
-        return "Duration is invalid"
-        
     result = operations.add_session(
                     user=user,
                     gameName=gameName,
@@ -248,6 +257,40 @@ def dm_last_sessions(user: storage.User, message: discord.Message) -> str:
         return out
     except Exception as e:
         return f"ERROR: {e}"
+    
+def dm_set_game(user: storage.User, message: discord.Message) -> str:
+    # !setgame <session_id> "Game Name"
+    # !setgame <session_id1-session_id2> "Game Name"
+    parts = message.content[9:].split('"')
+    if len(parts) < 3:
+        return "Invalid command format. Use: `!setgame <session_id> \"Game Name\"` or `!setgame <session_id1-session_id2> \"Game Name\"`"
+    game_name = parts[1].strip()[:-1]  # Remove trailing quote
+    game = operations.get_or_create_game(gameName=game_name)
+    if not game:
+        return f"Game '{game_name}' not found or could not be created."
+    session_ids = parts[0].strip()
+    parsed = utils.parseRange(session_ids)
+    if parsed:
+        a,b = parsed
+    else:
+        try:
+            a = int(session_ids)
+            b = a
+        except ValueError:
+            return "Invalid session ID. Please provide a valid integer or a range in the format `start-end`."
+    while a <= b:
+        activity = storage.Activity.get_or_none(storage.Activity.id == a)
+        if activity is None:
+            return f"Session {a} not found."
+        if activity.user != user:
+            return f"Session {a} does not belong to you."
+        if activity.game == game:
+            return f"Session {a} is already set to game {game.name}."
+        operations.set_game_for_activity(activity, game)
+        a += 1
+    return f"Game has been set to **{game.name}** for session(s) {session_ids}."
+
+    
 
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
@@ -277,6 +320,8 @@ def dm_receive(message: discord.Message) -> str:
         return dm_set_platform(user, message)
     elif msg.startswith("!setdate"):
         return dm_set_date(user, message)
+    elif msg.startswith("!setgame"):
+        return dm_set_game(user, message)
     elif msg.startswith("!last"):
         return dm_last_sessions(user, message)
     else:
