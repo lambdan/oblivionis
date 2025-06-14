@@ -74,6 +74,7 @@ def user_name_from_message(message: discord.Message) -> str:
 
 def dm_add_session(user: storage.User, message: str) -> str:
     # !add "Game Name" <duration> [timestamp]
+
     matches = [m[1] for m in re.findall(r'(["\'])(.*?)\1', message)]
     gameName = matches[0] if matches else None
     if not gameName:
@@ -299,6 +300,9 @@ def dm_receive(message: discord.Message) -> str:
     if user is None:
         logger.error("Could not get Oblivionis User for message: %s", message)
         return "ERROR: Try again later"
+    
+    # replace Apple's (stupid) quotes with normal ones
+    message.content = message.content.replace("“", '"').replace("”", '"')
         
     if msg.startswith("!help"):
         return dm_help()
@@ -326,7 +330,3 @@ def dm_receive(message: discord.Message) -> str:
         return dm_last_sessions(user, message)
     else:
         return "Unknown command. Use `!help` to see available commands."
-    
-# IDEAS:
-# !reduce <session_id> <seconds> - Reduce the session time by a certain number of seconds
-# !add <session_id> <seconds> - Add a session with a specific game name and seconds
