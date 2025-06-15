@@ -344,11 +344,7 @@ def adm_remove_game_images(message: discord.Message) -> str:
     game = storage.Game.get_or_none(storage.Game.id == id)
     if game is None:
         return f"ERROR: Game with ID {id} not found."
-    operations.update_game_images(gameName=game.name, assets={
-        "small_image_url": "null",
-        "large_image_url": "null"
-    })
-    return f"OK! Removed images for game {game.name}"
+    return operations.remove_game_images(game)
 
 def adm_set_steam_id(message: discord.Message) -> str:
     # !setsteamid <game:id> <steam_id>

@@ -71,11 +71,11 @@ def update_game_images(gameName: str, assets: ActivityAssets):
     if large:
         Game.update(large_image=large).where(Game.id == game.id).execute()
         logger.info("Updated large image for game %s: %s", gameName, large)
-    # TODO: Prettier way of doing this...
-    if small == "null":
-        Game.update(small_image="").where(Game.id == game.id).execute()
-    if large == "null":
-        Game.update(large_image="").where(Game.id == game.id).execute()
+
+def remove_game_images(game: storage.Game) -> str:    
+    Game.update(small_image=None, large_image=None).where(Game.id == game.id).execute()
+    logger.info("Removed images for game %s", game.name)
+    return f"Images for game '{game.name}' removed successfully."
 
 def remove_session(user: storage.User, sessionId: int):
     activity = Activity.get(id == sessionId)
