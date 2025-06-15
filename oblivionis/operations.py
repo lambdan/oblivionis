@@ -2,6 +2,7 @@ import datetime
 import logging
 
 from oblivionis import storage, utils
+from oblivionis.models import ActivityAssets
 from oblivionis.storage import User, Game, Activity
 from oblivionis.consts import MINIMUM_SESSION_LENGTH
 
@@ -58,16 +59,18 @@ def add_session(user: storage.User, gameName: str, seconds: int, platform:str|No
         logger.error("Failed to add session for user %s: %s", user.id, e)
         return None, e
     
-def update_game_images(gameName: str, smallImage: str|None, largeImage: str|None):
+def update_game_images(gameName: str, assets: ActivityAssets):
     game = get_or_create_game(gameName)
     if not game:
         return
-    if smallImage:
-        Game.update(small_image=smallImage).where(Game.id == game.id).execute()
-        logger.info("Updated small image for game %s: %s", gameName, smallImage)
-    if largeImage:
-        Game.update(large_image=largeImage).where(Game.id == game.id).execute()
-        logger.info("Updated large image for game %s: %s", gameName, largeImage)
+    small = assets["small_image_url"]
+    large = assets["large_image_url"]
+    if small:
+        Game.update(small_image=small).where(Game.id == game.id).execute()
+        logger.info("Updated small image for game %s: %s", gameName, small)
+    if large:
+        Game.update(large_image=large).where(Game.id == game.id).execute()
+        logger.info("Updated large image for game %s: %s", gameName, large)
 
 def remove_session(user: storage.User, sessionId: int):
     activity = Activity.get(id == sessionId)

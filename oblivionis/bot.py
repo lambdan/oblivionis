@@ -82,8 +82,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
             logger.warning("No game found in activity %s", activity)
             return
 
-        assets = assets_from_activity(activity)
-        update_game_images(gameName=game, smallImage=assets["small_image_url"], largeImage=assets["large_image_url"])
+        update_game_images(gameName=game, assets=assets_from_activity(activity))
 
         user = get_or_create_user(str(before.id), before.name)
         if not user:
