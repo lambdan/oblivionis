@@ -57,6 +57,17 @@ def add_session(user: storage.User, gameName: str, seconds: int, platform:str|No
     except Exception as e:
         logger.error("Failed to add session for user %s: %s", user.id, e)
         return None, e
+    
+def update_game_images(gameName: str, smallImage: str|None, largeImage: str|None):
+    game = get_or_create_game(gameName)
+    if not game:
+        return
+    if smallImage:
+        Game.update(small_image=smallImage).where(Game.id == game.id).execute()
+        logger.info("Updated small image for game %s: %s", gameName, smallImage)
+    if largeImage:
+        Game.update(large_image=largeImage).where(Game.id == game.id).execute()
+        logger.info("Updated large image for game %s: %s", gameName, largeImage)
 
 def remove_session(user: storage.User, sessionId: int):
     activity = Activity.get(id == sessionId)

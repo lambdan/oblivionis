@@ -36,6 +36,8 @@ class User(BaseModel):
 class Game(BaseModel):
     id = IntegerField(primary_key=True)
     name = CharField(unique=True)
+    small_image = CharField(default="")
+    large_image = CharField(default="")
 
 
 class Activity(BaseModel):
@@ -67,3 +69,6 @@ def connect_db():
         db.execute_sql("ALTER TABLE public.activity ADD COLUMN IF NOT EXISTS platform VARCHAR(20) DEFAULT 'pc';")
         # Add default_platform column to User if it doesn't exist
         db.execute_sql("ALTER TABLE public.user ADD COLUMN IF NOT EXISTS default_platform VARCHAR(20) DEFAULT 'pc';")
+        # Add small_image and large_image columns to Game if they don't exist
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS small_image VARCHAR(255) DEFAULT '';")
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS large_image VARCHAR(255) DEFAULT '';")
