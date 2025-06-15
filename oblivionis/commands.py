@@ -317,6 +317,23 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
+def adm_set_game_image(message: discord.Message) -> str:
+    # !setgameimage <game:id> <image_url>
+    # same url for both for now
+    parts = message.content[14:].split()
+    if len(parts) != 2:
+        return "Invalid command format. Use: `!setgameimage <game_id> <image_url>`"
+    game = storage.Game.get_or_none(storage.Game.id == int(parts[0]))
+    if game is None:
+        return f"ERROR: Game with ID {parts[0]} not found."
+    image_url = parts[1]
+    if not image_url.startswith("http"):
+        return "ERROR: Image URL should start with http or https."
+    operations.update_game_images(gameName=game.name, assets={
+        "small_image_url": image_url,
+        "large_image_url": image_url
+    })
+    return "OK"
 
 
 def dm_receive(message: discord.Message) -> str:
@@ -331,6 +348,10 @@ def dm_receive(message: discord.Message) -> str:
     
     # replace Apple's (stupid) quotes with normal ones
     message.content = message.content.replace("“", '"').replace("”", '"')
+
+    if isAdmin:
+        if msg.startswith("!setgameimage"):
+            return adm_set_game_image(message)
         
     if msg.startswith("!help"):
         return dm_help(isAdmin)
