@@ -55,6 +55,7 @@ def dm_help() -> str:
 
 class ManualSession(TypedDict):
     gameName: str
+    platform: str | None
     startTime: datetime.datetime
 
 MANUAL_SESSIONS: dict[str, ManualSession] = {}
@@ -103,20 +104,35 @@ def dm_add_session(user: storage.User, message: str) -> str:
 
 def dm_start_session(user: storage.User, message: discord.Message) -> str:
     # !start "Game Name"
-    gameName = message.content[7:].strip('"')
-    userId = str(user.id)
+    # !start "Game Name" <platform>
 
-    if len(gameName) == 0:
-        return "Missing game name"
-    
+    userId = str(user.id)
     if userId in MANUAL_SESSIONS:
         return 'You already have a manual session running. Please `!stop` before starting a new one.'
+
+    def parse(command) -> tuple[str|None, str|None]:
+        match = re.match(r'!start\s+"([^"]+)"(?:\s+(\S+))?', command)
+        if match:
+            game = match.group(1)
+            platform = match.group(2) if match.group(2) else None
+            return game, platform
+        return None, None
+
+    gameName, platform = parse(message.content)
+    if not gameName:
+        return 'ERROR: Could not extract game name. Use `!start "Game Name" [platform]`'
+    if platform is not None and platform.lower() not in consts.VALID_PLATFORMS:
+        return "ERROR: Invalid platform"
     
+    if platform is None:
+        platform = str(user.default_platform)
+
     MANUAL_SESSIONS[userId] = {
         "gameName": gameName,
+        "platform": platform,
         "startTime": utils.now()
     }
-    return f"You have started playing **{gameName}**. Send me `!stop` to end the session."
+    return f"You have started playing **{gameName}** on **{platform}**.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     # !stop
@@ -131,13 +147,14 @@ def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     seconds = int(duration.total_seconds())
     result = operations.add_session(
                 user=user,
+                platform=session["platform"],
                 gameName=gameName,
                 seconds=seconds)
     
     if result[1]:
         if isinstance(result[1], ValueError):
             # Too short
-            return f"⚠️ Session ended, but not saved.\nSessions must be atleast {consts.MINIMUM_SESSION_LENGTH} seconds (was {seconds} seconds)."
+            return f"Session ended, but not saved because it was too short (minimum is {consts.MINIMUM_SESSION_LENGTH} secs)"
         # internal failure
         MANUAL_SESSIONS[userId] = session
         return f"ERROR: Could not save session. Your session will keep running. Please try again."
