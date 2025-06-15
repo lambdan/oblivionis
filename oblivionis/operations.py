@@ -71,6 +71,11 @@ def update_game_images(gameName: str, assets: ActivityAssets):
     if large:
         Game.update(large_image=large).where(Game.id == game.id).execute()
         logger.info("Updated large image for game %s: %s", gameName, large)
+    # TODO: Prettier way of doing this...
+    if small == "null":
+        Game.update(small_image="").where(Game.id == game.id).execute()
+    if large == "null":
+        Game.update(large_image="").where(Game.id == game.id).execute()
 
 def remove_session(user: storage.User, sessionId: int):
     activity = Activity.get(id == sessionId)
@@ -114,4 +119,3 @@ def modify_session_date(user: storage.User, sessionId: int, new_date: datetime.d
     activity.timestamp = new_date
     activity.save()
     return f"Session {sessionId} date has been modified to {new_date.strftime('%Y-%m-%d %H:%M:%S')}"
-    

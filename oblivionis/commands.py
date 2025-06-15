@@ -56,7 +56,8 @@ def dm_help(isAdmin: bool) -> str:
 """
     admin = """
 # ☢️ Admin commands:
-- `!setgameimage <game_id> <url>` - Set the small and large image for a game
+- `!setgameimage <game_id> <url>`
+- `!removegameimages <game_id>`
 """
     if isAdmin:
         return base + admin
@@ -333,7 +334,20 @@ def adm_set_game_image(message: discord.Message) -> str:
         "small_image_url": image_url,
         "large_image_url": image_url
     })
-    return "OK"
+    return "OK, updated game images for game **{}**".format(game.name, game.id)
+
+def adm_remove_game_images(message: discord.Message) -> str:
+    # !removegameimages <game:id>
+    id = message.content.removeprefix("!removegameimages ").strip()
+    id = int(id)
+    game = storage.Game.get_or_none(storage.Game.id == id)
+    if game is None:
+        return f"ERROR: Game with ID {id} not found."
+    operations.update_game_images(gameName=game.name, assets={
+        "small_image_url": "null",
+        "large_image_url": "null"
+    })
+    return f"OK! Removed images for game {game.name}"
 
 
 def dm_receive(message: discord.Message) -> str:
@@ -352,6 +366,9 @@ def dm_receive(message: discord.Message) -> str:
     if isAdmin:
         if msg.startswith("!setgameimage"):
             return adm_set_game_image(message)
+        elif msg.startswith("!removegameimages"):
+            return adm_remove_game_images(message)
+
         
     if msg.startswith("!help"):
         return dm_help(isAdmin)
