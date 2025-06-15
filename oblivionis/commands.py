@@ -7,10 +7,12 @@ from oblivionis import operations, utils, storage, consts
 from typing import TypedDict, Dict
 import datetime
 
+from oblivionis.globals import ADMINS
+
 logger = logging.getLogger("commands")
 
-def dm_help() -> str:
-    return """
+def dm_help(isAdmin: bool) -> str:
+    base = """
 # Help:
 - `!help` - Show this message
 
@@ -52,6 +54,13 @@ def dm_help() -> str:
     - This is the platform used when platform cannot be automatically determined (e.g. manual sessions)
 - `!listplatforms` - List all valid platforms
 """
+    admin = """
+# ☢️ Admin commands:
+- `!setgameimage <game_id> <url>` - Set the small and large image for a game
+"""
+    if isAdmin:
+        return base + admin
+    return base
 
 class ManualSession(TypedDict):
     gameName: str
@@ -308,10 +317,13 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
-    
+
 
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
+
+    isAdmin = str(message.author.id) in ADMINS
+
     user = user_from_message(message)
     if user is None:
         logger.error("Could not get Oblivionis User for message: %s", message)
@@ -321,7 +333,7 @@ def dm_receive(message: discord.Message) -> str:
     message.content = message.content.replace("“", '"').replace("”", '"')
         
     if msg.startswith("!help"):
-        return dm_help()
+        return dm_help(isAdmin)
     elif msg.startswith("!add"):
         return dm_add_session(user, msg)
     elif msg.startswith("!start"):
