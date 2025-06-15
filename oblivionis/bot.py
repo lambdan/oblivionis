@@ -29,23 +29,24 @@ def game_name_from_activity(activity: discord.Activity) -> str | None:
     return activity.name
 
 def assets_from_activity(activity: discord.Activity) -> models.ActivityAssets:
+    blacklist = [
+        # Steam Deck icon
+        "https://cdn.discordapp.com/app-assets/1055680235682672682/1056080943783354388.png"
+    ]
+    
     res: models.ActivityAssets = {
         "small_image_url": None,
         "large_image_url": None,
     }
-    
-    if activity.name == "Steam Deck":
-        # avoid setting Steam Deck icon on games
-        return res
-    
+
     for asset in activity.assets:
         if asset == "small_image":
             url = activity.assets.get("small_image", None)
-            if url:
+            if url and url not in blacklist:
                 res["small_image_url"] = "https://" + url.split("/https/")[1]
         elif asset == "large_image":
             url = activity.assets.get("small_image", None)
-            if url:
+            if url and url not in blacklist:
                 res["large_image_url"] = "https://" + url.split("/https/")[1]
     return res
 
