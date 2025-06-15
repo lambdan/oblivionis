@@ -36,8 +36,9 @@ class User(BaseModel):
 class Game(BaseModel):
     id = IntegerField(primary_key=True)
     name = CharField(unique=True)
-    small_image = CharField(default="")
-    large_image = CharField(default="")
+    small_image = CharField(null=True, default=None)
+    large_image = CharField(null=True, default=None)
+    steam_id = IntegerField(null=True, default=None)
 
 
 class Activity(BaseModel):
@@ -47,6 +48,7 @@ class Activity(BaseModel):
     game = ForeignKeyField(Game)
     seconds = IntegerField()
     platform = CharField(default="pc", max_length=20)
+    
 
 def game_from_id(gameId: int) -> Game | None:
     return Game.get_or_none(Game.id == gameId)
@@ -70,5 +72,9 @@ def connect_db():
         # Add default_platform column to User if it doesn't exist
         db.execute_sql("ALTER TABLE public.user ADD COLUMN IF NOT EXISTS default_platform VARCHAR(20) DEFAULT 'pc';")
         # Add small_image and large_image columns to Game if they don't exist
-        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS small_image VARCHAR(255) DEFAULT '';")
-        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS large_image VARCHAR(255) DEFAULT '';")
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS small_image VARCHAR(255);")
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS large_image VARCHAR(255);")
+        # Add steam_id column
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS steam_id INTEGER;")
+        
+

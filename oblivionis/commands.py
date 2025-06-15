@@ -58,6 +58,7 @@ def dm_help(isAdmin: bool) -> str:
 # ☢️ Admin commands:
 - `!setgameimage <game_id> <url>`
 - `!removegameimages <game_id>`
+- `!setsteamid <game_id> <steam_id>`
 """
     if isAdmin:
         return base + admin
@@ -349,6 +350,21 @@ def adm_remove_game_images(message: discord.Message) -> str:
     })
     return f"OK! Removed images for game {game.name}"
 
+def adm_set_steam_id(message: discord.Message) -> str:
+    # !setsteamid <game:id> <steam_id>
+    parts = message.content[12:].strip().split()
+    if len(parts) != 2:
+        return "Invalid command format. Use: `!setsteamid <game_id> <steam_id>`"
+    
+    game_id = int(parts[0])
+    steam_id = int(parts[1])
+
+    game = storage.Game.get_or_none(storage.Game.id == game_id)
+    if game is None:
+        return f"ERROR: Game with ID {game_id} not found."
+    
+    storage.Game.update(steam_id=steam_id).where(storage.Game.id == game.id).execute()
+    return f"OK! Set Steam ID {steam_id} for game {game.name}"
 
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
@@ -368,6 +384,8 @@ def dm_receive(message: discord.Message) -> str:
             return adm_set_game_image(message)
         elif msg.startswith("!removegameimages"):
             return adm_remove_game_images(message)
+        elif msg.startswith("!setsteamid"):
+            return adm_set_steam_id(message)
 
         
     if msg.startswith("!help"):
