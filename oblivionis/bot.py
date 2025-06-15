@@ -33,7 +33,7 @@ def assets_from_activity(activity: discord.Activity) -> models.ActivityAssets:
         # Steam Deck icon
         "https://cdn.discordapp.com/app-assets/1055680235682672682/1056080943783354388.png"
     ]
-    
+
     res: models.ActivityAssets = {
         "small_image_url": None,
         "large_image_url": None,
@@ -42,12 +42,18 @@ def assets_from_activity(activity: discord.Activity) -> models.ActivityAssets:
     for asset in activity.assets:
         if asset == "small_image":
             url = activity.assets.get("small_image", None)
-            if url and url not in blacklist:
+            if url:
                 res["small_image_url"] = "https://" + url.split("/https/")[1]
         elif asset == "large_image":
             url = activity.assets.get("small_image", None)
-            if url and url not in blacklist:
+            if url:
                 res["large_image_url"] = "https://" + url.split("/https/")[1]
+
+    if res["small_image_url"] and res["small_image_url"] in blacklist:
+        res["small_image_url"] = None
+    if res["large_image_url"] and res["large_image_url"] in blacklist:
+        res["large_image_url"] = None
+
     return res
 
 def platform_from_activity(activity: discord.Activity) -> str:
