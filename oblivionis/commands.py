@@ -44,7 +44,7 @@ def dm_help(isAdmin: bool) -> str:
 - `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
 
 ## Game:
-- `!setgame <session_id> "Game Name" - Change the game of a specific session
+- `!setgame <session_id> "Game Name"` - Change the game of a specific session
     - This is useful if your session shows up as an emulator, and you would like to change it to the actual game you played
 - `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
 
