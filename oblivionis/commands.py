@@ -1,7 +1,4 @@
 import logging
-import os
-import re
-
 import discord
 from oblivionis import operations, utils, storage, consts
 from typing import TypedDict, Dict
@@ -139,7 +136,7 @@ def dm_start_session(user: storage.User, message: discord.Message) -> str:
         "platform": platform,
         "startTime": utils.now()
     }
-    return f"You have started playing **{gameName}** on **{platform}**.\nSend `!stop` to end the session."
+    return f"Started playing **{gameName}** on **{platform}**.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     # !stop
@@ -170,15 +167,12 @@ def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     
 
 def dm_merge_game(user: storage.User, message: discord.Message) -> str:
-    # !merge 123 456 # Merge game with ID 123 into game with ID 456
-    parts = message.content[7:].split()
+    # !merge 123 456 
+    parts = message.content.removeprefix('!merge ').strip().split()
     if len(parts) != 2:
         return "Invalid command format. Use: `!merge game_id1 game_id2`"
-    try:
-        game_id1 = int(parts[0])
-        game_id2 = int(parts[1])
-    except ValueError:
-        return "Invalid game IDs. Please provide valid integers."
+    game_id1 = int(parts[0])
+    game_id2 = int(parts[1])
     return operations.merge_games(user, gameId1=game_id1, gameId2=game_id2)
 
 def dm_remove_session(user: storage.User, message: discord.Message) -> str:
@@ -193,11 +187,7 @@ def dm_platform(user: storage.User, message: discord.Message) -> str:
     if message.content == "!platform":
         return f"Your default platform is **{user.default_platform}**. Use `!platform <name>` to change it."
     
-    parts = message.content[10:].split()
-    if len(parts) != 1:
-        return "Invalid command format. Use: `!platform <name>`"
-    
-    platform = parts[0].lower()
+    platform = message.content.removeprefix('!platform ').strip().lower()
     if platform not in consts.VALID_PLATFORMS:
         return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
     
@@ -205,9 +195,9 @@ def dm_platform(user: storage.User, message: discord.Message) -> str:
 
 def dm_set_platform(user: storage.User, message: discord.Message) -> str:
     # !setplatform <session_id> <platform>
-    parts = message.content[13:].split()
+    parts = message.content.removeprefix('!setplatform ').strip().split()
     if len(parts) != 2:
-        return "Invalid command format. Use: `!setplatform <session_id> <platform>`"
+        return "Invalid command format"
     
     session_id = parts[0]
     platform = parts[1].lower()
@@ -215,42 +205,32 @@ def dm_set_platform(user: storage.User, message: discord.Message) -> str:
     if platform not in consts.VALID_PLATFORMS:
         return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
 
-    if "-" in session_id:
-        # batch mode
+    parsed = utils.parseRange(session_id)
+    if parsed:
+        a,b = parsed
+    else:
         try:
-            a = int(session_id.split("-")[0])
-            b = int(session_id.split("-")[1])
+            a = int(session_id)
+            b = a
         except ValueError:
-            return "Invalid session ID range. Please provide valid integers in the format `start-end`."
-        if a > b or a == b:
-            return "Invalid range"
-        while a <= b:
-            operations.set_platform_for_session(
-                user,
-                sessionId=a,
-                platform=platform
-            )
-            a += 1
-        return f"OK! Platform has been set to **{platform}** for sessions {session_id}"
-    
-    try:
-        session_id = int(session_id)
-    except ValueError:
-        return "Invalid session ID. Please provide a valid integer."
+            return "Invalid session ID. Please provide a valid integer or a range in the format `start-end`."
+    while a <= b:
+        operations.set_platform_for_session(
+            user,
+            sessionId=a,
+            platform=platform
+        )
+        a += 1
+    return f"OK! Platform has been set to **{platform}** for sessions {session_id}"
 
-    return operations.set_platform_for_session(user, sessionId=session_id, platform=platform)
 
 def dm_set_date(user: storage.User, message: discord.Message) -> str:
     # !setdate <session_id> <new_date>
-    parts = message.content[9:].split()
+    parts = message.content.removeprefix('!setdate ').strip().split()
     if len(parts) != 2:
-        return "Invalid command format"
-    
-    if not parts[1].upper().endswith("Z"):
-        return "Invalid date format. Please provide the date in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)"
+        return "Invalid format"
     
     session_id = int(parts[0])
-    
     new_date = utils.datetimeFromISO8601(parts[1])
     if new_date is None:
         return "Date format is invalid"
@@ -268,29 +248,28 @@ def dm_last_sessions(user: storage.User, message: discord.Message) -> str:
     amount = 1
     if len(splitted) == 2:
         amount = min(int(splitted[1]), 10)
-    try:
-        sessions = storage.Activity.select().where(storage.Activity.user == user).order_by(storage.Activity.timestamp.desc()).limit(amount)
-        lines = []
-        for session in sessions:
-            lines.append(f"#{session.id}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform})\t{utils.secsToHHMMSS(session.seconds)}")
-        out = "```\n"
-        out += "\n".join(reversed(lines))
-        out += "```"
-        return out
-    except Exception as e:
-        return f"ERROR: {e}"
+    sessions = storage.Activity.select().where(storage.Activity.user == user).order_by(storage.Activity.timestamp.desc()).limit(amount)
+    lines = []
+    for session in sessions:
+        lines.append(f"#{session.id}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform})\t{utils.secsToHHMMSS(session.seconds)}")
+    out = "```\n"
+    out += "\n".join(reversed(lines))
+    out += "```"
+    return out
     
 def dm_set_game(user: storage.User, message: discord.Message) -> str:
     # !setgame <session_id> "Game Name"
     # !setgame <session_id1-session_id2> "Game Name"
-    parts = message.content[9:].split('"')
-    if len(parts) < 3:
-        return "Invalid command format. Use: `!setgame <session_id> \"Game Name\"` or `!setgame <session_id1-session_id2> \"Game Name\"`"
-    game_name = parts[1].strip()[:-1]  # Remove trailing quote
+
+    msg = message.content.replace('"', '')
+    msg = msg.removeprefix('!setgame ').strip().split()
+    
+    session_ids = msg.pop(0).strip()
+    game_name = " ".join(msg).strip()
     game = operations.get_or_create_game(gameName=game_name)
     if not game:
         return f"Game '{game_name}' not found or could not be created."
-    session_ids = parts[0].strip()
+    
     parsed = utils.parseRange(session_ids)
     if parsed:
         a,b = parsed
@@ -312,17 +291,18 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
-def game_info(gameNameOrId: str) -> str:
+def dm_game_info(message: discord.Message) -> str:
     # !game <game_id|game_name>
+    msg = message.content.removeprefix('!game ').strip()
     try:
-        gameId = int(gameNameOrId)
+        gameId = int(msg)
         game = storage.Game.get_or_none(storage.Game.id == gameId)
     except ValueError:
-        gameNameOrId = gameNameOrId.replace('"', '')
-        game = storage.Game.get_or_none(storage.Game.name == gameNameOrId)
+        msg = msg.replace('"', '')
+        game = storage.Game.get_or_none(storage.Game.name == msg)
 
     if game is None:
-        return f"Game with ID or name '{gameNameOrId}' not found."
+        return f"Game with ID or name '{msg}' not found."
 
     out = f"# {game.name}\n"
     out += f"ID: `{game.id}`\n"
@@ -353,8 +333,7 @@ def adm_set_game_image(message: discord.Message) -> str:
 
 def adm_remove_game_images(message: discord.Message) -> str:
     # !removegameimages <game:id>
-    id = message.content.removeprefix("!removegameimages ").strip()
-    id = int(id)
+    id = int(message.content.removeprefix("!removegameimages ").strip())
     game = storage.Game.get_or_none(storage.Game.id == id)
     if game is None:
         return f"ERROR: Game with ID {id} not found."
@@ -362,18 +341,14 @@ def adm_remove_game_images(message: discord.Message) -> str:
 
 def adm_set_steam_id(message: discord.Message) -> str:
     # !setsteamid <game:id> <steam_id>
-    parts = message.content[12:].strip().split()
+    parts = message.content.removeprefix("!setsteamid ").strip().split()
     if len(parts) != 2:
         return "Invalid command format. Use: `!setsteamid <game_id> <steam_id>`"
-    
     game_id = int(parts[0])
-
     steam_id = None if parts[1] == "null" else int(parts[1])
-
     game = storage.Game.get_or_none(storage.Game.id == game_id)
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
-    
     storage.Game.update(steam_id=steam_id).where(storage.Game.id == game.id).execute()
     return f"OK! Set Steam ID {steam_id} for game {game.name}"
 
@@ -392,9 +367,7 @@ def adm_set_sgdb_id(message: discord.Message) -> str:
 
 
 def dm_receive(message: discord.Message) -> str:
-    msg = message.content.strip()
-    # Replace Apple's stupid quotes
-    msg = msg.replace("“", '"').replace("”", '"')
+    msg = utils.normalizeQuotes(message.content.strip())
 
     user = user_from_message(message)
     if user is None:
@@ -412,11 +385,10 @@ def dm_receive(message: discord.Message) -> str:
         elif msg.startswith("!setsgdbid"):
             return adm_set_sgdb_id(message)
 
-        
     if msg.startswith("!help"):
         return dm_help(isAdmin)
     elif msg.startswith("!game"):
-        return game_info(msg.removeprefix('!game ').strip())
+        return dm_game_info(message=message)
     elif msg.startswith("!add"):
         return dm_add_session(user, msg)
     elif msg.startswith("!start"):

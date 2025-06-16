@@ -81,3 +81,9 @@ def parseRange(s: str) -> tuple[int, int] | None:
         return (start, end)
     except Exception as e:
         return None
+
+def normalizeQuotes(s: str) -> str:
+    """
+    Remove dumb Apple quotes and replaces them with standard quotes
+    """
+    return s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'").replace("’", "'").replace("`", "'").replace("´", "'")

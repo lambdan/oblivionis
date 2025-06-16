@@ -118,4 +118,4 @@ def modify_session_date(user: storage.User, sessionId: int, new_date: datetime.d
         return f"ERROR: Session {sessionId} does not belong to you"
     activity.timestamp = new_date
     activity.save()
-    return f"Session {sessionId} date has been modified to {new_date.strftime('%Y-%m-%d %H:%M:%S')}"
+    return f"Session {sessionId} date has been modified to {new_date.strftime('%Y-%m-%d %H:%M:%S')} UTC"

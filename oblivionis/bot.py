@@ -129,13 +129,14 @@ async def on_message(message: discord.Message):
             return
         message.content = message.content[1:]
 
-    reply = "Error processing your message"
+    reply = ""
 
     try:
         logger.info("<%s>: %s", message.author, message.content)
         reply = dm_receive(message)
     except Exception as e:
         logger.error("Error processing message from %s: %s", message.author, e)
+        reply = f"ERROR: {e}"
     
     logger.info("Replying to %s: %s", message.author, reply)
     await message.author.send(reply, reference=message)
