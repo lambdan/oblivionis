@@ -18,10 +18,6 @@ def dm_help(isAdmin: bool) -> str:
 
 # Manual addition:
 - `!add "Game Name" <duration> [datetime]` - Add a session of specified duration
-    - Duration can be one of these formats:
-        - `123` (eg `!add "Game Name" 3600`)
-        - `HH:MM:SS` (eg `!add "Game Name" 01:00:00`)
-        - `XXhYYmZZs` (eg `!add "Game Name" 1h30m15s`)
     - If datetime is not provided, current time is used
         - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 
@@ -44,6 +40,7 @@ def dm_help(isAdmin: bool) -> str:
 - `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
 
 ## Game:
+- `!game <game_id|game_name>` - Show information about a game
 - `!setgame <session_id> "Game Name"` - Change the game of a specific session
     - This is useful if your session shows up as an emulator, and you would like to change it to the actual game you played
 - `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
@@ -320,6 +317,27 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
+def game_info(gameNameOrId: str) -> str:
+    # !game <game_id|game_name>
+    try:
+        gameId = int(gameNameOrId)
+        game = storage.Game.get_or_none(storage.Game.id == gameId)
+    except ValueError:
+        gameNameOrId = gameNameOrId.replace('"', '')
+        game = storage.Game.get_or_none(storage.Game.name == gameNameOrId)
+
+    if game is None:
+        return f"Game with ID or name '{gameNameOrId}' not found."
+
+    out = f"# {game.name}\n"
+    out += f"ID: `{game.id}`\n"
+    out += f"Small Image: {game.small_image}\n"
+    out += f"Large Image: {game.large_image}\n"
+    out += f"Steam ID: `{game.steam_id}`\n"
+    out += f"SGDB ID: `{game.sgdb_id}`\n"
+    
+    return out
+
 def adm_set_game_image(message: discord.Message) -> str:
     # !setgameimage <game:id> <image_url>
     # same url for both for now
@@ -401,6 +419,8 @@ def dm_receive(message: discord.Message) -> str:
         
     if msg.startswith("!help"):
         return dm_help(isAdmin)
+    elif msg.startswith("!game"):
+        return game_info(msg.removeprefix('!game ').strip())
     elif msg.startswith("!add"):
         return dm_add_session(user, msg)
     elif msg.startswith("!start"):
