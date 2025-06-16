@@ -55,8 +55,8 @@ def dm_help(isAdmin: bool) -> str:
 # ☢️ Admin commands:
 - `!setgameimage <game_id> <url>`
 - `!removegameimages <game_id>`
-- `!setsteamid <game_id> <steam_id>`
-- `!setsgdbid <game_id> <sgdb_id>`
+- `!setsteamid <game_id> <steam_id|null>`
+- `!setsgdbid <game_id> <sgdb_id|null>`
 """
     if isAdmin:
         return base + admin
@@ -372,7 +372,8 @@ def adm_set_steam_id(message: discord.Message) -> str:
         return "Invalid command format. Use: `!setsteamid <game_id> <steam_id>`"
     
     game_id = int(parts[0])
-    steam_id = int(parts[1])
+
+    steam_id = None if parts[1] == "null" else int(parts[1])
 
     game = storage.Game.get_or_none(storage.Game.id == game_id)
     if game is None:
@@ -387,7 +388,7 @@ def adm_set_sgdb_id(message: discord.Message) -> str:
     if len(parts) != 2:
         return "ERROR: Invalid command format"
     game_id = int(parts[0])
-    sgdb_id = int(parts[1])
+    sgdb_id = None if parts[1] == "null" else int(parts[1])
     game = storage.Game.get_or_none(storage.Game.id == game_id)
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
