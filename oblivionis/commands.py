@@ -86,7 +86,6 @@ def user_name_from_message(message: discord.Message) -> str:
 
 def dm_add_session(user: storage.User, message: str) -> str:
     # !add "Game Name" <duration> [timestamp]
-
     message = message.removeprefix('!add "')
     gameName = message.split('"')[0].strip()
 
@@ -107,8 +106,10 @@ def dm_add_session(user: storage.User, message: str) -> str:
                     user=user,
                     gameName=gameName,
                     seconds=duration, timestamp=timestamp)
-    
-    return "OK"
+    sesh = result[0]
+    if sesh:
+        return f"Session #{sesh.id} saved"
+    return f"ERROR: {result[1]}"
 
 def dm_start_session(user: storage.User, message: discord.Message) -> str:
     # !start "Game Name"
