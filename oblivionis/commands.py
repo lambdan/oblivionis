@@ -87,13 +87,10 @@ def user_name_from_message(message: discord.Message) -> str:
 def dm_add_session(user: storage.User, message: str) -> str:
     # !add "Game Name" <duration> [timestamp]
 
-    matches = [m[1] for m in re.findall(r'(["\'])(.*?)\1', message)]
-    gameName = matches[0] if matches else None
-    if not gameName:
-        return 'ERROR: Could not extract game name'
+    message = message.removeprefix('!add "')
+    gameName = message.split('"')[0].strip()
 
-    parts = message.split(" ")
-
+    parts = message.split('"')[1].split()
     timestamp = None
     duration = None
     last = parts.pop() # This is the timestamp if provided
@@ -116,23 +113,23 @@ def dm_add_session(user: storage.User, message: str) -> str:
 def dm_start_session(user: storage.User, message: discord.Message) -> str:
     # !start "Game Name"
     # !start "Game Name" <platform>
-
     userId = str(user.id)
     if userId in MANUAL_SESSIONS:
         return 'You already have a manual session running. Please `!stop` before starting a new one.'
 
-    def parse(command) -> tuple[str|None, str|None]:
-        match = re.match(r'!start\s+"([^"]+)"(?:\s+(\S+))?', command)
-        if match:
-            game = match.group(1)
-            platform = match.group(2) if match.group(2) else None
-            return game, platform
-        return None, None
+    msg = message.content.strip()
+    msg = msg.removeprefix('!start "').strip()
 
-    gameName, platform = parse(message.content)
-    if not gameName:
-        return 'ERROR: Could not extract game name. Use `!start "Game Name" [platform]`'
-    if platform is not None and platform.lower() not in consts.VALID_PLATFORMS:
+    gameName = msg.split('"')[0].strip()
+    platform = None
+    if msg.endswith('"'):
+        # If the message ends with a quote, it means no platform is specified
+        pass
+    else:
+        # Platform is specified after the game name
+        platform = msg.split('"')[1].strip().lower()
+    
+    if platform and not platform in consts.VALID_PLATFORMS:
         return "ERROR: Invalid platform"
     
     if platform is None:
@@ -162,14 +159,16 @@ def dm_stop_session(user: storage.User, message: discord.Message) -> str:
                 gameName=gameName,
                 seconds=seconds)
     
-    if result[1]:
-        if isinstance(result[1], ValueError):
-            # Too short
-            return f"Session ended, but not saved because it was too short (minimum is {consts.MINIMUM_SESSION_LENGTH} secs)"
-        # internal failure
-        MANUAL_SESSIONS[userId] = session
-        return f"ERROR: Could not save session. Your session will keep running. Please try again."
-    return f"Session {result[0]} saved. You played **{gameName}** for {utils.secsToHHMMSS(seconds)} seconds!"
+    sesh = result[0]
+    if sesh:
+        return f"Session #{sesh} saved.\nYou played **{gameName}** on **{sesh.platform}** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
+    
+    if isinstance(result[1], ValueError):
+        return "Session ended, but not saved because it was too short"
+    # internal failure
+    MANUAL_SESSIONS[userId] = session
+    return f"ERROR: Could not save session. Your session will keep running. Please try again."
+    
 
 def dm_merge_game(user: storage.User, message: discord.Message) -> str:
     # !merge 123 456 # Merge game with ID 123 into game with ID 456
@@ -364,17 +363,15 @@ def adm_set_steam_id(message: discord.Message) -> str:
 
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
-
-    isAdmin = str(message.author.id) in ADMINS
+    # Replace Apple's stupid quotes
+    msg = msg.replace("“", '"').replace("”", '"')
 
     user = user_from_message(message)
     if user is None:
         logger.error("Could not get Oblivionis User for message: %s", message)
         return "ERROR: Try again later"
-    
-    # replace Apple's (stupid) quotes with normal ones
-    message.content = message.content.replace("“", '"').replace("”", '"')
 
+    isAdmin = str(message.author.id) in ADMINS
     if isAdmin:
         if msg.startswith("!setgameimage"):
             return adm_set_game_image(message)
