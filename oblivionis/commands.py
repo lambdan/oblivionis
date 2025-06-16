@@ -183,16 +183,11 @@ def dm_merge_game(user: storage.User, message: discord.Message) -> str:
 
 def dm_remove_session(user: storage.User, message: discord.Message) -> str:
     # !remove session_id
-    parts = message.content[8:].split()
-    if len(parts) != 1:
-        return "Invalid command format. Use: `!remove session_id`"
-    
-    try:
-        session_id = int(parts[0])
-    except ValueError:
-        return "Invalid session ID"
-    
-    return operations.remove_session(user, sessionId=session_id)
+    msg = message.content.removeprefix('!remove ').strip()
+    if not msg.isdigit():
+        return "Invalid command format (not a number?)"
+    msg = int(msg)
+    return operations.remove_session(user, sessionId=msg)
 
 def dm_platform(user: storage.User, message: discord.Message) -> str:
     if message.content == "!platform":

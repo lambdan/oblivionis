@@ -78,7 +78,7 @@ def remove_game_images(game: storage.Game) -> str:
     return f"Images for game '{game.name}' removed successfully."
 
 def remove_session(user: storage.User, sessionId: int):
-    activity = Activity.get(id == sessionId)
+    activity = Activity.get(Activity.id == sessionId)
     if activity.user != user:
         return f"ERROR: Session {sessionId} does not belong to you"
     activity.delete_instance()
