@@ -39,6 +39,7 @@ class Game(BaseModel):
     small_image = CharField(null=True, default=None)
     large_image = CharField(null=True, default=None)
     steam_id = IntegerField(null=True, default=None)
+    sgdb_id = IntegerField(null=True, default=None)
 
 
 class Activity(BaseModel):
@@ -76,5 +77,6 @@ def connect_db():
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS large_image VARCHAR(255);")
         # Add steam_id column
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS steam_id INTEGER;")
+        # Add sgdb_id column
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS sgdb_id INTEGER;")
         
-

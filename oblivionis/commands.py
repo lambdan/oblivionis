@@ -59,6 +59,7 @@ def dm_help(isAdmin: bool) -> str:
 - `!setgameimage <game_id> <url>`
 - `!removegameimages <game_id>`
 - `!setsteamid <game_id> <steam_id>`
+- `!setsgdbid <game_id> <sgdb_id>`
 """
     if isAdmin:
         return base + admin
@@ -362,6 +363,20 @@ def adm_set_steam_id(message: discord.Message) -> str:
     storage.Game.update(steam_id=steam_id).where(storage.Game.id == game.id).execute()
     return f"OK! Set Steam ID {steam_id} for game {game.name}"
 
+def adm_set_sgdb_id(message: discord.Message) -> str:
+    # !setsgdbid <game:id> <sgdb_id>
+    parts = message.content.removeprefix("!setsgdbid ").strip().split()
+    if len(parts) != 2:
+        return "ERROR: Invalid command format"
+    game_id = int(parts[0])
+    sgdb_id = int(parts[1])
+    game = storage.Game.get_or_none(storage.Game.id == game_id)
+    if game is None:
+        return f"ERROR: Game with ID {game_id} not found."
+    storage.Game.update(sgdb_id=sgdb_id).where(storage.Game.id == game.id).execute()
+    return f"OK! **{game.name}** SGDB ID = **{sgdb_id}**"
+
+
 def dm_receive(message: discord.Message) -> str:
     msg = message.content.strip()
     # Replace Apple's stupid quotes
@@ -380,6 +395,8 @@ def dm_receive(message: discord.Message) -> str:
             return adm_remove_game_images(message)
         elif msg.startswith("!setsteamid"):
             return adm_set_steam_id(message)
+        elif msg.startswith("!setsgdbid"):
+            return adm_set_sgdb_id(message)
 
         
     if msg.startswith("!help"):
