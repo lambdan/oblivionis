@@ -4,10 +4,9 @@
 
 ### Added
 
-- Added commands to the bot. DM the bot `!help` to see what is possible.
+- Added commands to the bot. DM the bot `!help` to see what is possible. This lets you manage pretty much everything. For admins there are some exclusive options.
 - Add platform tracking. It will be read from `activity.platform` or you can set it manually. Default will be "pc", and retroactively set.
-- Added image fields for games. This will be grabbed from Discord activity if present.
-- Added `steam_id` field for Games. For now it is only used to acquire images.
+- Added `steam_id`, `sgdb_id` and `image_url` fields to `Game`
 - Sessions shorter than 30 seconds are discarded
 
 ## [0.2.0] - 2025-04-23
