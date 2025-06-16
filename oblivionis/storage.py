@@ -36,10 +36,9 @@ class User(BaseModel):
 class Game(BaseModel):
     id = IntegerField(primary_key=True)
     name = CharField(unique=True)
-    small_image = CharField(null=True, default=None)
-    large_image = CharField(null=True, default=None)
     steam_id = IntegerField(null=True, default=None)
     sgdb_id = IntegerField(null=True, default=None)
+    image_url = CharField(null=True, default=None)
 
 
 class Activity(BaseModel):
@@ -68,6 +67,9 @@ def connect_db():
         logger.info("Connected to database %s", db.database)
     db.create_tables([User, Game, Activity])
     with db.atomic():
+        ##############
+        # Evolutions #
+        ##############
         # Add platform column if it doesn't exist
         db.execute_sql("ALTER TABLE public.activity ADD COLUMN IF NOT EXISTS platform VARCHAR(20) DEFAULT 'pc';")
         # Add default_platform column to User if it doesn't exist
@@ -79,4 +81,9 @@ def connect_db():
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS steam_id INTEGER;")
         # Add sgdb_id column
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS sgdb_id INTEGER;")
+        # Delete old small and large image columns
+        db.execute_sql("ALTER TABLE public.game DROP COLUMN IF EXISTS small_image;")
+        db.execute_sql("ALTER TABLE public.game DROP COLUMN IF EXISTS large_image;")
+        # Add image_url column
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);")
         

@@ -50,8 +50,7 @@ def dm_help(isAdmin: bool) -> str:
 """
     admin = """
 # ☢️ Admin commands:
-- `!setgameimage <game_id> <url>`
-- `!removegameimages <game_id>`
+- `!setgameimage <game_id> <url|null>`
 - `!setsteamid <game_id> <steam_id|null>`
 - `!setsgdbid <game_id> <sgdb_id|null>`
 """
@@ -306,38 +305,29 @@ def dm_game_info(message: discord.Message) -> str:
 
     out = f"# {game.name}\n"
     out += f"ID: `{game.id}`\n"
-    out += f"Small Image: {game.small_image}\n"
-    out += f"Large Image: {game.large_image}\n"
     out += f"Steam ID: `{game.steam_id}`\n"
     out += f"SGDB ID: `{game.sgdb_id}`\n"
+    out += f"Image URL: {game.image_url}\n"
     
     return out
 
 def adm_set_game_image(message: discord.Message) -> str:
-    # !setgameimage <game:id> <image_url>
+    # !setgameimage <game_id> <image_url|null>
     # same url for both for now
-    parts = message.content[14:].split()
+    parts = message.content.removeprefix("!setgameimage ").strip().split()
     if len(parts) != 2:
         return "Invalid command format. Use: `!setgameimage <game_id> <image_url>`"
     game = storage.Game.get_or_none(storage.Game.id == int(parts[0]))
     if game is None:
         return f"ERROR: Game with ID {parts[0]} not found."
     image_url = parts[1]
-    if not image_url.startswith("http"):
-        return "ERROR: Image URL should start with http or https."
-    operations.update_game_images(gameName=game.name, assets={
-        "small_image_url": image_url,
-        "large_image_url": image_url
-    })
-    return "OK, updated game images for game **{}**".format(game.name, game.id)
+    if image_url != "null" and not image_url.startswith("http"):
+        return "ERROR: Image URL should start with http or https, or be null"
+    game.image_url = None if image_url == "null" else image_url
+    game.save()
+    return f"OK, updated game image for game **{game.name}**"
 
-def adm_remove_game_images(message: discord.Message) -> str:
-    # !removegameimages <game:id>
-    id = int(message.content.removeprefix("!removegameimages ").strip())
-    game = storage.Game.get_or_none(storage.Game.id == id)
-    if game is None:
-        return f"ERROR: Game with ID {id} not found."
-    return operations.remove_game_images(game)
+
 
 def adm_set_steam_id(message: discord.Message) -> str:
     # !setsteamid <game:id> <steam_id>
@@ -378,8 +368,6 @@ def dm_receive(message: discord.Message) -> str:
     if isAdmin:
         if msg.startswith("!setgameimage"):
             return adm_set_game_image(message)
-        elif msg.startswith("!removegameimages"):
-            return adm_remove_game_images(message)
         elif msg.startswith("!setsteamid"):
             return adm_set_steam_id(message)
         elif msg.startswith("!setsgdbid"):

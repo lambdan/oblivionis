@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from oblivionis import models, storage
 from oblivionis.commands import dm_receive
-from oblivionis.operations import add_session, get_or_create_user, update_game_images
+from oblivionis.operations import add_session, get_or_create_user
 from oblivionis.globals import DEBUG, LOGLEVEL
 
 if DEBUG:
@@ -27,34 +27,6 @@ def game_name_from_activity(activity: discord.Activity) -> str | None:
     if activity.name == "Steam Deck" and activity.details:
         return activity.details.removeprefix("Playing ")
     return activity.name
-
-def assets_from_activity(activity: discord.Activity) -> models.ActivityAssets:
-    blacklist = [
-        # Steam Deck icon
-        "https://cdn.discordapp.com/app-assets/1055680235682672682/1056080943783354388.png"
-    ]
-
-    res: models.ActivityAssets = {
-        "small_image_url": None,
-        "large_image_url": None,
-    }
-
-    for asset in activity.assets:
-        if asset == "small_image":
-            url = activity.assets.get("small_image", None)
-            if url:
-                res["small_image_url"] = "https://" + url.split("/https/")[1]
-        elif asset == "large_image":
-            url = activity.assets.get("small_image", None)
-            if url:
-                res["large_image_url"] = "https://" + url.split("/https/")[1]
-
-    if res["small_image_url"] and res["small_image_url"] in blacklist:
-        res["small_image_url"] = None
-    if res["large_image_url"] and res["large_image_url"] in blacklist:
-        res["large_image_url"] = None
-
-    return res
 
 def platform_from_activity(activity: discord.Activity) -> str:
     # https://discordpy.readthedocs.io/en/stable/api.html#discord.Game.platform
@@ -88,8 +60,6 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         if not game:
             logger.warning("No game found in activity %s", activity)
             return
-
-        update_game_images(gameName=game, assets=assets_from_activity(activity))
 
         user = get_or_create_user(str(before.id), before.name)
         if not user:
