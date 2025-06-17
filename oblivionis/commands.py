@@ -53,6 +53,8 @@ def dm_help(isAdmin: bool) -> str:
 - `!setgameimage <game_id> <url|null>`
 - `!setsteamid <game_id> <steam_id|null>`
 - `!setsgdbid <game_id> <sgdb_id|null>`
+- `!addalias <game_id> <alias>`
+- `!delalias <game_id> <alias>`
 """
     if isAdmin:
         return base + admin
@@ -308,6 +310,7 @@ def dm_game_info(message: discord.Message) -> str:
     out += f"Steam ID: `{game.steam_id}`\n"
     out += f"SGDB ID: `{game.sgdb_id}`\n"
     out += f"Image URL: {game.image_url}\n"
+    out += f"Aliases: `{', '.join(game.aliases)}`\n"
     
     return out
 
@@ -355,6 +358,40 @@ def adm_set_sgdb_id(message: discord.Message) -> str:
     storage.Game.update(sgdb_id=sgdb_id).where(storage.Game.id == game.id).execute()
     return f"OK! **{game.name}** SGDB ID = **{sgdb_id}**"
 
+def adm_add_alias(message: discord.Message) -> str:
+    # !addalias <game_id> <alias>
+    parts = message.content.removeprefix("!addalias ").strip().split()
+    if len(parts) != 2:
+        return "ERROR: Invalid command format. Use: `!addalias <game_id> <alias>`"
+    game_id = int(parts.pop(0))
+    alias = " ".join(parts).strip()
+    game = storage.Game.get_or_none(storage.Game.id == game_id)
+    if game is None:
+        return f"ERROR: Game with ID {game_id} not found."
+    if game.aliases and alias in game.aliases:
+        return f"Alias '{alias}' already exists for game {game.name}."
+    if not game.aliases:
+        game.aliases = []
+    game.aliases.append(alias)
+    game.save()
+    return f"OK! Added alias '{alias}' for game {game.name}"
+
+def adm_del_alias(message: discord.Message) -> str:
+    # !delalias <game_id> <alias>
+    parts = message.content.removeprefix("!delalias ").strip().split()
+    if len(parts) != 2:
+        return "ERROR: Invalid command format. Use: `!delalias <game_id> <alias>`"
+    game_id = int(parts.pop(0))
+    alias = " ".join(parts).strip()
+    game = storage.Game.get_or_none(storage.Game.id == game_id)
+    if game is None:
+        return f"ERROR: Game with ID {game_id} not found."
+    if not game.aliases or alias not in game.aliases:
+        return f"Alias '{alias}' does not exist for game {game.name}."
+    game.aliases.remove(alias)
+    game.save()
+    return f"OK! Removed alias '{alias}' from game {game.name}"
+
 
 def dm_receive(message: discord.Message) -> str:
     msg = utils.normalizeQuotes(message.content.strip())
@@ -372,6 +409,10 @@ def dm_receive(message: discord.Message) -> str:
             return adm_set_steam_id(message)
         elif msg.startswith("!setsgdbid"):
             return adm_set_sgdb_id(message)
+        elif msg.startswith("!addalias"):
+            return adm_add_alias(message)
+        elif msg.startswith("!delalias"):
+            return adm_del_alias(message)
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)
