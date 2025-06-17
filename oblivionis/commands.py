@@ -365,6 +365,12 @@ def adm_add_alias(message: discord.Message) -> str:
         return "ERROR: Invalid command format. Use: `!addalias <game_id> <alias>`"
     game_id = int(parts.pop(0))
     alias = " ".join(parts).strip()
+
+    # check if any game already uses this alias
+    aliasedGame = operations.get_game_by_alias(alias)
+    if aliasedGame:
+        return f"ERROR: Alias '{alias}' already exists for game {aliasedGame.name} (ID {aliasedGame.id})."
+    
     game = storage.Game.get_or_none(storage.Game.id == game_id)
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."

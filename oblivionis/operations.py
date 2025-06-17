@@ -29,6 +29,19 @@ def get_or_create_game(gameName: str) -> storage.Game | None:
     except Exception as e:
         logger.error("Failed to get or create game %s: %s", gameName, e)
         return None
+    
+def get_game_by_alias(alias: str) -> storage.Game | None:
+    """
+    Returns a game by its alias.
+    If no game is found, returns None.
+    """
+    try:
+        game = storage.Game.get(storage.Game.aliases.contains(alias))
+        logger.debug("Found game by alias '%s': %s", alias, game)
+        return game
+    except Exception as e:
+        logger.debug("Did not get game by alias '%s': %s", alias, e)
+        return None
 
 def add_session(user: storage.User, gameName: str, seconds: int, platform:str|None=None, timestamp:datetime.datetime|None=None) -> tuple[Activity|None, Exception|None]:
     """
