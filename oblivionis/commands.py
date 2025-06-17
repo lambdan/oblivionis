@@ -14,12 +14,12 @@ def dm_help(isAdmin: bool) -> str:
 - `!help` - Show this message
 
 # Manual addition:
-- `!add "Game Name" <duration> [datetime]` - Add a session of specified duration
+- `!add "Game Name"|alias <duration> [datetime]` - Add a session of specified duration
     - If datetime is not provided, current time is used
         - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 
 # Manual start/stop:
-- `!start "Game Name"` - Start a manual session
+- `!start "Game Name"|alias` - Start a manual session
 - `!stop` - Stop the current manually started session
 
 # Sessions:
@@ -107,14 +107,13 @@ def dm_add_session(user: storage.User, message: str) -> str:
         return f"Session #{sesh.id} saved"
     return f"ERROR: {result[1]}"
 
-def dm_start_session(user: storage.User, message: discord.Message) -> str:
+def dm_start_session(user: storage.User, msg: str) -> str:
     # !start "Game Name"
     # !start "Game Name" <platform>
     userId = str(user.id)
     if userId in MANUAL_SESSIONS:
         return 'You already have a manual session running. Please `!stop` before starting a new one.'
 
-    msg = message.content.strip()
     msg = msg.removeprefix('!start "').strip()
 
     gameName = msg.split('"')[0].strip()
@@ -398,6 +397,20 @@ def adm_del_alias(message: discord.Message) -> str:
     game.save()
     return f"OK! Removed alias '{alias}' from game {game.name}"
 
+def try_expand_alias(msg: str) -> str:
+    # if quotes: it should be a full title 
+    if '"' in msg:
+        return msg
+    # if no quotes: maybe an alias?
+    splitted = msg.split()
+    alias = splitted[1].strip()
+    game = operations.get_game_by_alias(alias)
+    if game is None:
+        return msg # did not find alias: return original
+    # Replace alias with full game name (hax...)
+    splitted[1] = f'"{game.name}"'
+    msg = " ".join(splitted)
+    return msg
 
 def dm_receive(message: discord.Message) -> str:
     msg = utils.normalizeQuotes(message.content.strip())
@@ -425,9 +438,11 @@ def dm_receive(message: discord.Message) -> str:
     elif msg.startswith("!game"):
         return dm_game_info(message=message)
     elif msg.startswith("!add"):
+        msg = try_expand_alias(msg)
         return dm_add_session(user, msg)
     elif msg.startswith("!start"):
-        return dm_start_session(user, message)
+        msg = try_expand_alias(msg)
+        return dm_start_session(user, msg)
     elif msg.startswith("!stop"):
         return dm_stop_session(user, message)
     elif msg.startswith("!merge"):

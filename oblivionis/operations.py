@@ -37,7 +37,7 @@ def get_game_by_alias(alias: str) -> storage.Game | None:
     """
     try:
         game = storage.Game.get(storage.Game.aliases.contains(alias))
-        logger.debug("Found game by alias '%s': %s", alias, game)
+        logger.debug("Found game by alias '%s': %s %s", alias, game.id, game.name)
         return game
     except Exception as e:
         logger.debug("Did not get game by alias '%s': %s", alias, e)
