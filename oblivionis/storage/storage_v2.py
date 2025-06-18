@@ -70,3 +70,4 @@ class Activity(BaseModel):
 def connect_db():
     db.connect()
     db.create_tables([Platform, User, Game, Activity])
+    

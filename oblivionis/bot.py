@@ -6,7 +6,7 @@ from discord.ext import commands
 from oblivionis import models
 from oblivionis.storage import migrate_v1_to_v2, storage_v1, storage_v2
 from oblivionis.commands import dm_receive
-from oblivionis.operations import add_session, get_or_create_user
+from oblivionis.operations import add_session
 from oblivionis.globals import DEBUG, LOGLEVEL
 
 if DEBUG:

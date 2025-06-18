@@ -1,5 +1,7 @@
 from oblivionis.storage import storage_v1, storage_v2
-
+from oblivionis.storage.reset_sequence import reset_sequences
+import logging
+logger = logging.getLogger("migrate_v1_to_v2")
 
 def migrate():
     for user in storage_v1.User.select():
@@ -36,3 +38,5 @@ def migrate():
     storage_v1.Activity.drop_table()
     storage_v1.Game.drop_table()
     storage_v1.User.drop_table()
+    reset_sequences([storage_v2.Platform, storage_v2.Game, storage_v2.Activity])
+    logger.info("Migration completed successfully :D")

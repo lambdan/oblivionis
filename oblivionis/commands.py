@@ -18,7 +18,7 @@ def dm_help(isAdmin: bool) -> str:
 # Manual addition:
 - `!add "Game Name"|alias <duration> [datetime]` - Add a session of specified duration
     - If datetime is not provided, current time is used
-        - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
+    - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
 
 # Manual start/stop:
 - `!start "Game Name"|alias` - Start a manual session
@@ -41,13 +41,11 @@ def dm_help(isAdmin: bool) -> str:
 ## Game:
 - `!game <game_id|game_name>` - Show information about a game
 - `!setgame <session_id> "Game Name"` - Change the game of a specific session
-    - This is useful if your session shows up as an emulator, and you would like to change it to the actual game you played
 - `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
 
 # Platform:
 - `!platform` - Show your current default platform
 - `!platform <name>` - Set your default platform
-    - This is the platform used when platform cannot be automatically determined (e.g. manual sessions)
 - `!platforms` - List all valid platforms
 """
     admin = """
@@ -100,7 +98,7 @@ def dm_add_session(user: User, message: str) -> str:
     if duration is None:
         return "ERROR: Duration is invalid"
     
-    game = Game.get_or_create(name=gameName)
+    game, created = Game.get_or_create(name=gameName)
     
     result = operations.add_session(
                     user=user,
@@ -130,13 +128,17 @@ def dm_start_session(user: User, msg: str) -> str:
         platform = Platform.get_or_none(Platform.abbreviation == platform)
         if not platform:
             return "Invalid platform"
+        
+    game, created = Game.get_or_create(name=gameName)
+    if created:
+        logger.info("Added new game %s to database", gameName)
     
     MANUAL_SESSIONS[userId] = { # type: ignore
-        "game": Game.get_or_create(name=gameName),
+        "game": game,
         "platform": platform,
         "startTime": utils.now()
     }
-    return f"Started playing **{gameName}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
+    return f"Started playing **{game.name}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: User, message: discord.Message) -> str:
     # !stop
@@ -191,7 +193,7 @@ def dm_platform(user: User, message: discord.Message) -> str:
     if not platform:
         return "Invalid platform. Use `!listplatforms` to see valid platforms, or ask an admin to add it."
 
-    user = User.get_or_create(id=message.author.id, name=message.author.name)[0]
+    user,created = User.get_or_create(id=message.author.id, name=message.author.name)
     user.default_platform = platform
     user.save()
     return f"Your default platform has been set to **{user.default_platform.abbreviation}**"
@@ -271,7 +273,7 @@ def dm_set_game(user: User, message: discord.Message) -> str:
     
     session_ids = msg.pop(0).strip()
     game_name = " ".join(msg).strip()
-    game = operations.get_or_create_game(gameName=game_name)
+    game,created = Game.get_or_create(name=game_name)
     if not game:
         return f"Game '{game_name}' not found or could not be created."
     
@@ -301,7 +303,7 @@ def dm_game_info(message: discord.Message) -> str:
     msg = message.content.removeprefix('!game ').strip()
     try:
         gameId = int(msg)
-        game = Game.get_or_none(Game == gameId)
+        game = Game.get_or_none(Game.id == gameId) # type: ignore
     except ValueError:
         msg = msg.replace('"', '')
         game = Game.get_or_none(Game.name == msg)

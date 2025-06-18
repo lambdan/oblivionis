@@ -2,7 +2,7 @@ import datetime
 import discord
 
 from oblivionis import operations
-from oblivionis.storage.storage_v2 import User, Activity, Game, Platform
+from oblivionis.storage.storage_v2 import Game, Platform
 
 
 def adm_set_game_image(message: discord.Message) -> str:
@@ -11,7 +11,7 @@ def adm_set_game_image(message: discord.Message) -> str:
     parts = message.content.removeprefix("!setgameimage ").strip().split()
     if len(parts) != 2:
         return "Invalid command format. Use: `!setgameimage <game_id> <image_url>`"
-    game = Game.get_or_none(Game == int(parts[0]))
+    game = Game.get_or_none(Game.id == int(parts[0])) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {parts[0]} not found."
     image_url = parts[1]
@@ -30,10 +30,10 @@ def adm_set_steam_id(message: discord.Message) -> str:
         return "Invalid command format. Use: `!setsteamid <game_id> <steam_id>`"
     game_id = int(parts[0])
     steam_id = None if parts[1] == "null" else int(parts[1])
-    game = Game.get_or_none(Game == game_id)
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
-    Game.update(steam_id=steam_id).where(Game == game.id).execute()
+    Game.update(steam_id=steam_id).where(Game.id == game.id).execute() # type: ignore
     return f"OK! Set Steam ID {steam_id} for game {game.name}"
 
 def adm_set_sgdb_id(message: discord.Message) -> str:
@@ -43,10 +43,10 @@ def adm_set_sgdb_id(message: discord.Message) -> str:
         return "ERROR: Invalid command format"
     game_id = int(parts[0])
     sgdb_id = None if parts[1] == "null" else int(parts[1])
-    game = Game.get_or_none(Game == game_id)
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
-    Game.update(sgdb_id=sgdb_id).where(Game == game.id).execute()
+    Game.update(sgdb_id=sgdb_id).where(Game.id == game.id).execute() # type: ignore
     return f"OK! **{game.name}** SGDB ID = **{sgdb_id}**"
 
 def adm_add_alias(message: discord.Message) -> str:
@@ -62,7 +62,7 @@ def adm_add_alias(message: discord.Message) -> str:
     if aliasedGame:
         return f"ERROR: Alias '{alias}' already exists for game {aliasedGame.name} (ID {aliasedGame})."
     
-    game = Game.get_or_none(Game == game_id)
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
     if game.aliases and alias in game.aliases:
@@ -80,7 +80,7 @@ def adm_del_alias(message: discord.Message) -> str:
         return "ERROR: Invalid command format. Use: `!delalias <game_id> <alias>`"
     game_id = int(parts.pop(0))
     alias = " ".join(parts).strip()
-    game = Game.get_or_none(Game == game_id)
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
     if not game.aliases or alias not in game.aliases:
@@ -101,7 +101,7 @@ def adm_set_game_release_year(message: discord.Message) -> str:
     if year < 1950 or year > year_now:
         return f"ERROR: Invalid year {year}. It should be between 1950 and {year_now}."
     
-    game = Game.get_or_none(Game == game_id)
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
     if game is None:
         return f"ERROR: Game with ID {game_id} not found."
     

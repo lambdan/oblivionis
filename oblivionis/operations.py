@@ -7,28 +7,6 @@ from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from oblivionis.consts import MINIMUM_SESSION_LENGTH
 
 logger = logging.getLogger("operations")
-
-def get_or_create_user(userId: str, userName: str) -> User | None:
-    try:
-        user, user_created = User.get_or_create(id=userId, defaults={"name": userName})
-        if user_created:
-            logger.info("Added new user %s %s to database", userId, userName)
-        logger.debug("Returning user %s", user)
-        return user
-    except Exception as e:
-        logger.error("Failed to get or create user %s: %s", userId, e)
-        return None
-
-def get_or_create_game(gameName: str) -> Game | None:
-    try:
-        game, game_created = Game.get_or_create(name=gameName)
-        if game_created:
-            logger.info("Added new game %s to database", gameName)
-        logger.debug("Returning game %s", game)
-        return game
-    except Exception as e:
-        logger.error("Failed to get or create game %s: %s", gameName, e)
-        return None
     
 def get_game_by_alias(alias: str) -> Game | None:
     """
