@@ -1,6 +1,7 @@
 import logging
 import discord
-from oblivionis import admin_commands, operations, utils, storage, consts
+from oblivionis import admin_commands, operations, utils, consts
+from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from typing import TypedDict, Dict
 import datetime
 
@@ -66,20 +67,20 @@ def dm_help(isAdmin: bool) -> str:
 
 MANUAL_SESSIONS: dict[str, ManualSession] = {}
 
-def user_from_message(message: discord.Message, create=False) -> storage.User | None:
+def user_from_message(message: discord.Message) -> User | None:
     if message.author is None:
         return None
-    userId = str(message.author.id)
-    if create:
-        return operations.get_or_create_user(userId=userId, userName=message.author.name)
-    return storage.User.get_or_none(id=userId)
+    user, created = User.get_or_create(id=message.author.id, name=message.author.name)
+    if created:
+        logger.info("Added new user %s %s to database", message.author.id, message.author.name)
+    return user
 
 def user_name_from_message(message: discord.Message) -> str:
     if message.author is None:
         raise ValueError("Message author is None")
     return message.author.name
 
-def dm_add_session(user: storage.User, message: str) -> str:
+def dm_add_session(user: User, message: str) -> str:
     # !add "Game Name" <duration> [timestamp]
     message = message.removeprefix('!add "')
     gameName = message.split('"')[0].strip()
@@ -97,16 +98,19 @@ def dm_add_session(user: storage.User, message: str) -> str:
     if duration is None:
         return "ERROR: Duration is invalid"
     
+    game = Game.get_or_create(name=gameName)
+    
     result = operations.add_session(
                     user=user,
-                    gameName=gameName,
-                    seconds=duration, timestamp=timestamp)
+                    game=game,
+                    seconds=duration, 
+                    timestamp=timestamp)
     sesh = result[0]
     if sesh:
-        return f"Session #{sesh.id} saved"
+        return f"Session #{sesh} saved"
     return f"ERROR: {result[1]}"
 
-def dm_start_session(user: storage.User, msg: str) -> str:
+def dm_start_session(user: User, msg: str) -> str:
     # !start "Game Name"
     # !start "Game Name" <platform>
     userId = str(user.id)
@@ -137,7 +141,7 @@ def dm_start_session(user: storage.User, msg: str) -> str:
     }
     return f"Started playing **{gameName}** on **{platform}**.\nSend `!stop` to end the session."
 
-def dm_stop_session(user: storage.User, message: discord.Message) -> str:
+def dm_stop_session(user: User, message: discord.Message) -> str:
     # !stop
     userId = str(user.id)
     if userId not in MANUAL_SESSIONS:
@@ -148,15 +152,19 @@ def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     startTime = session["startTime"]
     duration = utils.now() - startTime
     seconds = int(duration.total_seconds())
+
+    game, created = Game.get_or_create(name=gameName)
+    platform, created = Platform.get_or_create(abbreviation=session["platform"])
+
     result = operations.add_session(
                 user=user,
-                platform=session["platform"],
-                gameName=gameName,
+                platform=platform,
+                game=game,
                 seconds=seconds)
     
     sesh = result[0]
     if sesh:
-        return f"Session #{sesh} saved.\nYou played **{gameName}** on **{sesh.platform}** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
+        return f"Session #{sesh} saved.\nYou played **{ game }** on **{platform}** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
     
     if isinstance(result[1], ValueError):
         return "Session ended, but not saved because it was too short"
@@ -165,7 +173,7 @@ def dm_stop_session(user: storage.User, message: discord.Message) -> str:
     return f"ERROR: Could not save session. Your session will keep running. Please try again."
     
 
-def dm_merge_game(user: storage.User, message: discord.Message) -> str:
+def dm_merge_game(user: User, message: discord.Message) -> str:
     # !merge 123 456 
     parts = message.content.removeprefix('!merge ').strip().split()
     if len(parts) != 2:
@@ -174,7 +182,7 @@ def dm_merge_game(user: storage.User, message: discord.Message) -> str:
     game_id2 = int(parts[1])
     return operations.merge_games(user, gameId1=game_id1, gameId2=game_id2)
 
-def dm_remove_session(user: storage.User, message: discord.Message) -> str:
+def dm_remove_session(user: User, message: discord.Message) -> str:
     # !remove session_id
     msg = message.content.removeprefix('!remove ').strip()
     if not msg.isdigit():
@@ -182,7 +190,7 @@ def dm_remove_session(user: storage.User, message: discord.Message) -> str:
     msg = int(msg)
     return operations.remove_session(user, sessionId=msg)
 
-def dm_platform(user: storage.User, message: discord.Message) -> str:
+def dm_platform(user: User, message: discord.Message) -> str:
     if message.content == "!platform":
         return f"Your default platform is **{user.default_platform}**. Use `!platform <name>` to change it."
     
@@ -192,7 +200,7 @@ def dm_platform(user: storage.User, message: discord.Message) -> str:
     
     return operations.set_default_platform(user, platform)
 
-def dm_set_platform(user: storage.User, message: discord.Message) -> str:
+def dm_set_platform(user: User, message: discord.Message) -> str:
     # !setplatform <session_id> <platform>
     parts = message.content.removeprefix('!setplatform ').strip().split()
     if len(parts) != 2:
@@ -223,7 +231,7 @@ def dm_set_platform(user: storage.User, message: discord.Message) -> str:
     return f"OK! Platform has been set to **{platform}** for sessions {session_id}"
 
 
-def dm_set_date(user: storage.User, message: discord.Message) -> str:
+def dm_set_date(user: User, message: discord.Message) -> str:
     # !setdate <session_id> <new_date>
     parts = message.content.removeprefix('!setdate ').strip().split()
     if len(parts) != 2:
@@ -240,23 +248,23 @@ def dm_set_date(user: storage.User, message: discord.Message) -> str:
             new_date=new_date
         )
 
-def dm_last_sessions(user: storage.User, message: discord.Message) -> str:
+def dm_last_sessions(user: User, message: discord.Message) -> str:
     # !last
     # !last n
     splitted = message.content.split()
     amount = 1
     if len(splitted) == 2:
         amount = min(int(splitted[1]), 10)
-    sessions = storage.Activity.select().where(storage.Activity.user == user).order_by(storage.Activity.timestamp.desc()).limit(amount)
+    sessions = Activity.select().where(Activity.user == user).order_by(Activity.timestamp.desc()).limit(amount)
     lines = []
     for session in sessions:
-        lines.append(f"#{session.id}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform})\t{utils.secsToHHMMSS(session.seconds)}")
+        lines.append(f"#{session}\t{session.timestamp.isoformat().split(".")[0].replace("T"," ")} UTC\t{session.game.name} ({session.platform.abbreviation})\t{utils.secsToHHMMSS(session.seconds)}")
     out = "```\n"
     out += "\n".join(reversed(lines))
     out += "```"
     return out
     
-def dm_set_game(user: storage.User, message: discord.Message) -> str:
+def dm_set_game(user: User, message: discord.Message) -> str:
     # !setgame <session_id> "Game Name"
     # !setgame <session_id1-session_id2> "Game Name"
 
@@ -279,7 +287,7 @@ def dm_set_game(user: storage.User, message: discord.Message) -> str:
         except ValueError:
             return "Invalid session ID. Please provide a valid integer or a range in the format `start-end`."
     while a <= b:
-        activity = storage.Activity.get_or_none(storage.Activity.id == a)
+        activity = Activity.get_or_none(Activity == a)
         if activity is None:
             return f"Session {a} not found."
         if activity.user != user:
@@ -295,10 +303,10 @@ def dm_game_info(message: discord.Message) -> str:
     msg = message.content.removeprefix('!game ').strip()
     try:
         gameId = int(msg)
-        game = storage.Game.get_or_none(storage.Game.id == gameId)
+        game = Game.get_or_none(Game == gameId)
     except ValueError:
         msg = msg.replace('"', '')
-        game = storage.Game.get_or_none(storage.Game.name == msg)
+        game = Game.get_or_none(Game.name == msg)
 
     if game is None:
         return f"Game with ID or name '{msg}' not found."

@@ -3,7 +3,8 @@ from typing import TypedDict
 import discord
 from discord.ext import commands
 
-from oblivionis import models, storage, storage_v2
+from oblivionis import models
+from oblivionis.storage import migrate_v1_to_v2, storage_v1, storage_v2
 from oblivionis.commands import dm_receive
 from oblivionis.operations import add_session, get_or_create_user
 from oblivionis.globals import DEBUG, LOGLEVEL
@@ -21,23 +22,20 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-def game_name_from_activity(activity: discord.Activity) -> str | None:
-    logger.debug("game_from_activity", activity)
+def game_from_discord_activity(activity: discord.Activity) -> storage_v2.Game:
+    gameName = activity.name
+    if gameName == "Steam Deck" and activity.details:
+        gameName = activity.details.removeprefix("Playing ")
+    game, created = storage_v2.Game.get_or_create(name=gameName)
+    if created:
+        logger.info("Added new game %s to database", gameName)
+    return game
 
-    if activity.name == "Steam Deck" and activity.details:
-        return activity.details.removeprefix("Playing ")
-    return activity.name
-
-def platform_from_activity(activity: discord.Activity) -> str:
-    # https://discordpy.readthedocs.io/en/stable/api.html#discord.Game.platform
+def platform_from_discord_activity(activity: discord.Activity) -> storage_v2.Platform:
     if activity.name == "Steam Deck":
-        return "steam-deck"
-    try:
-        if activity.platform:
-            return activity.platform.lower()
-    except Exception as e:
-        logger.warning("Failed to get platform from activity %s %s %s", activity.name, activity.platform, e)
-    return "pc"
+        return storage_v2.Platform.get_or_create(abbreviation="steamdeck")[0]
+    platformName = activity.platform or "pc"
+    return storage_v2.Platform.get_or_create(abbreviation=platformName)[0]
 
 @bot.event
 async def on_guild_available(guild: discord.Guild):
@@ -56,27 +54,21 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         duration = datetime.datetime.now(datetime.UTC) - activity.start # type: ignore
         seconds = int(duration.total_seconds())
 
-        game = game_name_from_activity(activity)
-        if not game:
-            logger.warning("No game found in activity %s", activity)
-            return
-
-        user = get_or_create_user(str(before.id), before.name)
-        if not user:
-            return
+        game = game_from_discord_activity(activity)
+        user, created = storage_v2.User.get_or_create(id=str(before.id), name=before.name)
         
-        platform = platform_from_activity(activity)
+        platform = platform_from_discord_activity(activity)
         logger.info("%s has stopped playing %s on %s after %s seconds", before, game, platform, seconds)
         add_session(
             user=user,
-            gameName=game,
+            game=game,
             seconds=seconds,
             platform=platform,
         )
     elif after.activity and after.activity.type == discord.ActivityType.playing:
         activity: discord.Activity = after.activity # type: ignore
-        game = game_name_from_activity(activity)
-        platform = platform_from_activity(activity)
+        game = game_from_discord_activity(activity)
+        platform = platform_from_discord_activity(activity)
         logger.info("%s has started playing %s on %s", after, game, platform)
 
 
@@ -112,41 +104,10 @@ async def on_message(message: discord.Message):
     await message.author.send(reply, reference=message)
 
 def main():
-    storage.connect_db()
+    storage_v1.connect_db()
     storage_v2.connect_db()
-    # Migrate v1 to v2
-    for user in storage.User.select():
-        if not storage_v2.User.get_or_none(storage_v2.User.id == user.id):
-            storage_v2.User.create(
-                id=user.id,
-                name=user.name,
-                default_platform=storage_v2.Platform.get_or_create(abbreviation=user.default_platform.replace("-", ""))[0]
-            )
-    for game in storage.Game.select():
-        if not storage_v2.Game.get_or_none(storage_v2.Game == game):
-            storage_v2.Game.create(
-                id=game.id,
-                name=game.name,
-                steam_id=game.steam_id,
-                sgdb_id=game.sgdb_id,
-                image_url=game.image_url,
-                aliases=game.aliases,
-                release_year=game.release_year
-            )
-    for activity in storage.Activity.select():
-        if not storage_v2.Activity.get_or_none(storage_v2.Activity == activity):
-            user = storage_v2.User.get_or_create(id=activity.user.id)[0]
-            game = storage_v2.Game.get_or_create(id=activity.game.id)[0]
-            platform = storage_v2.Platform.get_or_create(abbreviation=activity.platform.replace("-", ""))[0]
-            storage_v2.Activity.create(
-                id=activity.id,
-                timestamp=activity.timestamp,
-                user=user,
-                game=game,
-                seconds=activity.seconds,
-                platform=platform
-            )
-    
+    migrate_v1_to_v2.migrate()
+    storage_v1.disconnect_db()
     bot.run(os.environ["TOKEN"])
 
 

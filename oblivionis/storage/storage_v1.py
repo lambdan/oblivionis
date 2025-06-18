@@ -3,7 +3,7 @@ import os
 import logging
 from oblivionis.globals import LOGLEVEL
 
-logger = logging.getLogger("storage")
+logger = logging.getLogger("storage_v1")
 
 from peewee import (
     CharField,
@@ -31,12 +31,18 @@ class BaseModel(Model):
 
 
 class User(BaseModel):
+    """
+    User (V1)
+    """
     id = CharField(primary_key=True, max_length=20)
     name = CharField()
     default_platform = CharField(default="pc", max_length=20)
 
 
 class Game(BaseModel):
+    """
+    Game (V1)
+    """
     id = IntegerField(primary_key=True)
     name = CharField(unique=True)
     steam_id = IntegerField(null=True, default=None)
@@ -47,6 +53,9 @@ class Game(BaseModel):
 
 
 class Activity(BaseModel):
+    """
+    Activity (V1)
+    """
     id = IntegerField(primary_key=True)
     timestamp = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
     user = ForeignKeyField(User)
@@ -66,6 +75,13 @@ def activity_from_id(sessionId: int) -> Activity | None:
 
 def user_from_id(userId: str) -> User | None:
     return User.get_or_none(User.id == userId)
+
+def disconnect_db():
+    if db.is_closed():
+        logger.warning("Database is already closed")
+        return
+    db.close()
+    logger.info("Database connection closed")
 
 def connect_db():
     if db.connect():
