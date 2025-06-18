@@ -3,7 +3,7 @@ from typing import TypedDict
 import discord
 from discord.ext import commands
 
-from oblivionis import models, storage
+from oblivionis import models, storage, storage_v2
 from oblivionis.commands import dm_receive
 from oblivionis.operations import add_session, get_or_create_user
 from oblivionis.globals import DEBUG, LOGLEVEL
@@ -113,6 +113,40 @@ async def on_message(message: discord.Message):
 
 def main():
     storage.connect_db()
+    storage_v2.connect_db()
+    # Migrate v1 to v2
+    for user in storage.User.select():
+        if not storage_v2.User.get_or_none(storage_v2.User.id == user.id):
+            storage_v2.User.create(
+                id=user.id,
+                name=user.name,
+                default_platform=storage_v2.Platform.get_or_create(abbreviation=user.default_platform.replace("-", ""))[0]
+            )
+    for game in storage.Game.select():
+        if not storage_v2.Game.get_or_none(storage_v2.Game == game):
+            storage_v2.Game.create(
+                id=game.id,
+                name=game.name,
+                steam_id=game.steam_id,
+                sgdb_id=game.sgdb_id,
+                image_url=game.image_url,
+                aliases=game.aliases,
+                release_year=game.release_year
+            )
+    for activity in storage.Activity.select():
+        if not storage_v2.Activity.get_or_none(storage_v2.Activity == activity):
+            user = storage_v2.User.get_or_create(id=activity.user.id)[0]
+            game = storage_v2.Game.get_or_create(id=activity.game.id)[0]
+            platform = storage_v2.Platform.get_or_create(abbreviation=activity.platform.replace("-", ""))[0]
+            storage_v2.Activity.create(
+                id=activity.id,
+                timestamp=activity.timestamp,
+                user=user,
+                game=game,
+                seconds=activity.seconds,
+                platform=platform
+            )
+    
     bot.run(os.environ["TOKEN"])
 
 
