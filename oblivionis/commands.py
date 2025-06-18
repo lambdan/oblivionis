@@ -55,6 +55,7 @@ def dm_help(isAdmin: bool) -> str:
 - `!setsgdbid <game_id> <sgdb_id|null>`
 - `!addalias <game_id> <alias>`
 - `!delalias <game_id> <alias>`
+- `!setgamereleaseyear <game_id> <year>`
 """
     if isAdmin:
         return base + admin
