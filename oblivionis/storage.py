@@ -43,6 +43,7 @@ class Game(BaseModel):
     sgdb_id = IntegerField(null=True, default=None)
     image_url = CharField(null=True, default=None)
     aliases = ArrayField(TextField,  default=[]) # type: ignore
+    release_year = IntegerField(null=True, default=None)
 
 
 class Activity(BaseModel):
@@ -77,13 +78,6 @@ def connect_db():
     except Exception as e:
         logger.error("⚠️ Failed to create database tables: %s", e)
         
-
-    if databaseOk:
-        logger.info("✅ Database is OK! No migrations needed.")
-        return
-    
-    logger.info("⚠️ Migrations will run")
-        
     with db.atomic():
         ##############
         # Evolutions #
@@ -106,6 +100,8 @@ def connect_db():
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);")
         # Add aliases
         db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS aliases TEXT[] default '{}';")
+        # Add release_year column
+        db.execute_sql("ALTER TABLE public.game ADD COLUMN IF NOT EXISTS release_year INTEGER;")
     
     logger.info("⚠️ Migrations done")
     db.create_tables([User, Game, Activity])

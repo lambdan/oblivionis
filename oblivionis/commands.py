@@ -306,6 +306,7 @@ def dm_game_info(message: discord.Message) -> str:
 
     out = f"# {game.name}\n"
     out += f"ID: `{game.id}`\n"
+    out += f"Release Year: `{game.release_year}`\n"
     out += f"Steam ID: `{game.steam_id}`\n"
     out += f"SGDB ID: `{game.sgdb_id}`\n"
     out += f"Image URL: {game.image_url}\n"
@@ -397,6 +398,22 @@ def adm_del_alias(message: discord.Message) -> str:
     game.save()
     return f"OK! Removed alias '{alias}' from game {game.name}"
 
+def adm_set_game_release_year(message: discord.Message) -> str:
+    # !setgamereleaseyear <game_id> <year>
+    parts = message.content.removeprefix("!setgamereleaseyear ").strip().split()
+    if len(parts) != 2:
+        return "ERROR: Invalid command format. Use: `!setgamereleaseyear <game_id> <year>`"
+    game_id = int(parts[0])
+    year = int(parts[1])
+    
+    game = storage.Game.get_or_none(storage.Game.id == game_id)
+    if game is None:
+        return f"ERROR: Game with ID {game_id} not found."
+    
+    game.release_year = year
+    game.save()
+    return f"OK! Set release year {year} for game {game.name}"
+
 def try_expand_alias(msg: str) -> str:
     # if quotes: it should be a full title 
     if '"' in msg:
@@ -432,6 +449,8 @@ def dm_receive(message: discord.Message) -> str:
             return adm_add_alias(message)
         elif msg.startswith("!delalias"):
             return adm_del_alias(message)
+        elif msg.startswith("!setgamereleaseyear"):
+            return adm_set_game_release_year(message)
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)
