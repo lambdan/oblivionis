@@ -66,12 +66,7 @@ def merge_games(user: User, gameId1: int, gameId2: int):
     ).execute()
     return f"Game '{game1.name}' merged into '{game2.name}' successfully for your user"
 
-def set_game_for_activity(activity: Activity, newGame: Game) -> str:
-    if activity.game == newGame:
-        return f"Activity {activity} is already set to game {newGame}"
-    oldGame = activity.game
-    Activity.update(game=newGame).where(Activity == activity).execute()
-    return f"Activity {activity} has been changed from **{oldGame}** to **{newGame}**"
+
 
 def set_default_platform(user: User, platform: str) -> str:
     user.default_platform = platform # type: ignore

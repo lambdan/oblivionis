@@ -274,8 +274,6 @@ def dm_set_game(user: User, message: discord.Message) -> str:
     session_ids = msg.pop(0).strip()
     game_name = " ".join(msg).strip()
     game,created = Game.get_or_create(name=game_name)
-    if not game:
-        return f"Game '{game_name}' not found or could not be created."
     
     parsed = utils.parseRange(session_ids)
     if parsed:
@@ -287,14 +285,14 @@ def dm_set_game(user: User, message: discord.Message) -> str:
         except ValueError:
             return "Invalid session ID. Please provide a valid integer or a range in the format `start-end`."
     while a <= b:
-        activity = Activity.get_or_none(Activity == a)
-        if activity is None:
+        activity = Activity.get_or_none(Activity.id == a) # type: ignore
+        if not activity:
             return f"Session {a} not found."
         if activity.user != user:
             return f"Session {a} does not belong to you."
         if activity.game == game:
             return f"Session {a} is already set to game {game.name}."
-        operations.set_game_for_activity(activity, game)
+        Activity.update(game=game).where(Activity == activity).execute()
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
