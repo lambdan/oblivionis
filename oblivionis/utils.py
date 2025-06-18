@@ -15,6 +15,11 @@ def datetimeFromISO8601(s: str) -> datetime.datetime | None:
     """
     try:
         s = s.upper().strip()
+        parsed = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+        now = datetime.datetime.now(datetime.UTC)
+        if parsed > now:
+            logger.warning("Parsed datetime %s is in the future compared to now %s", parsed, now)
+            return None
         return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
     except Exception as e:
         return None

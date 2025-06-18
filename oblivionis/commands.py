@@ -405,6 +405,10 @@ def adm_set_game_release_year(message: discord.Message) -> str:
         return "ERROR: Invalid command format. Use: `!setgamereleaseyear <game_id> <year>`"
     game_id = int(parts[0])
     year = int(parts[1])
+
+    year_now = datetime.datetime.now(datetime.UTC).year
+    if year < 1950 or year > year_now:
+        return f"ERROR: Invalid year {year}. It should be between 1950 and {year_now}."
     
     game = storage.Game.get_or_none(storage.Game.id == game_id)
     if game is None:
