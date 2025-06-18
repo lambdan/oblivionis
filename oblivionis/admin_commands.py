@@ -109,3 +109,30 @@ def adm_set_game_release_year(message: discord.Message) -> str:
     game.save()
     return f"OK! Set release year {year} for game {game.name}"
 
+def adm_add_platform(message: discord.Message) -> str:
+    # !addplatform <platform_abbreviation> <platform_name>
+    parts = message.content.removeprefix("!addplatform ").strip().split()
+
+    abbr = parts.pop(0)
+    name = " ".join(parts).strip()
+
+    reply = []
+    platform, created = Platform.get_or_create(abbreviation=abbr)
+    if created:
+        reply.append("Added new platform")
+    platform.name = name if len(name) > 0 else None
+    platform.save()
+    reply.append(f"Abbreviation: **{abbr}**, Name: **{name}**")
+    return "\n".join(reply)
+
+def adm_del_platform(message: discord.Message) -> str:
+    # !delplatform <platform_abbreviation>
+    parts = message.content.removeprefix("!delplatform ").strip().split()
+    abbr = parts[0].strip()
+
+    platform = Platform.get_or_none(Platform.abbreviation == abbr)
+    if platform is None:
+        return "Platform not found"
+    
+    platform.delete_instance()
+    return "OK, deleted platform " + abbr

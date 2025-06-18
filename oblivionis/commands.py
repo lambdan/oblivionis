@@ -58,6 +58,8 @@ def dm_help(isAdmin: bool) -> str:
 - `!addalias <game_id> <alias>`
 - `!delalias <game_id> <alias>`
 - `!setgamereleaseyear <game_id> <year>`
+- `!addplatform <platform_abbreviation> <platform_name>`
+- `!delplatform <platform_abbreviation>`
 """
     if isAdmin:
         return base + admin
@@ -356,6 +358,10 @@ def dm_receive(message: discord.Message) -> str:
             return admin_commands.adm_del_alias(message)
         elif msg.startswith("!setgamereleaseyear"):
             return admin_commands.adm_set_game_release_year(message)
+        elif msg.startswith("!addplatform"):
+            return admin_commands.adm_add_platform(message)
+        elif msg.startswith("!delplatform"):
+            return admin_commands.adm_del_platform(message)
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)
