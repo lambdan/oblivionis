@@ -48,7 +48,7 @@ def dm_help(isAdmin: bool) -> str:
 - `!platform` - Show your current default platform
 - `!platform <name>` - Set your default platform
     - This is the platform used when platform cannot be automatically determined (e.g. manual sessions)
-- `!listplatforms` - List all valid platforms
+- `!platforms` - List all valid platforms
 """
     admin = """
 # ☢️ Admin commands:
@@ -120,26 +120,21 @@ def dm_start_session(user: User, msg: str) -> str:
     msg = msg.removeprefix('!start "').strip()
 
     gameName = msg.split('"')[0].strip()
-    platform = None
-    if msg.endswith('"'):
-        # If the message ends with a quote, it means no platform is specified
-        pass
-    else:
+
+    platform = user.default_platform 
+    if not msg.endswith('"'):
         # Platform is specified after the game name
         platform = msg.split('"')[1].strip().lower()
+        platform = Platform.get_or_none(Platform.abbreviation == platform)
+        if not platform:
+            return "Invalid platform"
     
-    if platform and not platform in consts.VALID_PLATFORMS:
-        return "ERROR: Invalid platform"
-    
-    if platform is None:
-        platform = str(user.default_platform)
-
-    MANUAL_SESSIONS[userId] = {
-        "gameName": gameName,
+    MANUAL_SESSIONS[userId] = { # type: ignore
+        "game": Game.get_or_create(name=gameName),
         "platform": platform,
         "startTime": utils.now()
     }
-    return f"Started playing **{gameName}** on **{platform}**.\nSend `!stop` to end the session."
+    return f"Started playing **{gameName}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: User, message: discord.Message) -> str:
     # !stop
@@ -148,23 +143,18 @@ def dm_stop_session(user: User, message: discord.Message) -> str:
         return "You don't have a manual session running"
     
     session = MANUAL_SESSIONS.pop(userId)
-    gameName = session["gameName"]
-    startTime = session["startTime"]
-    duration = utils.now() - startTime
+    duration = utils.now() - session["startTime"]
     seconds = int(duration.total_seconds())
-
-    game, created = Game.get_or_create(name=gameName)
-    platform, created = Platform.get_or_create(abbreviation=session["platform"])
 
     result = operations.add_session(
                 user=user,
-                platform=platform,
-                game=game,
+                platform=session["platform"],
+                game=session["game"],
                 seconds=seconds)
     
     sesh = result[0]
     if sesh:
-        return f"Session #{sesh} saved.\nYou played **{ game }** on **{platform}** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
+        return f"Session #{sesh} saved.\nYou played **{ session["game"] }** on **{ session["platform"].abbreviation }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
     
     if isinstance(result[1], ValueError):
         return "Session ended, but not saved because it was too short"
@@ -192,13 +182,17 @@ def dm_remove_session(user: User, message: discord.Message) -> str:
 
 def dm_platform(user: User, message: discord.Message) -> str:
     if message.content == "!platform":
-        return f"Your default platform is **{user.default_platform}**. Use `!platform <name>` to change it."
+        return f"Your default platform is **{user.default_platform.abbreviation}**. Use `!platform <name>` to change it."
     
     platform = message.content.removeprefix('!platform ').strip().lower()
-    if platform not in consts.VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
-    
-    return operations.set_default_platform(user, platform)
+    platform = Platform.get_or_none(Platform.abbreviation == platform)
+    if not platform:
+        return "Invalid platform. Use `!listplatforms` to see valid platforms, or ask an admin to add it."
+
+    user = User.get_or_create(id=message.author.id, name=message.author.name)[0]
+    user.default_platform = platform
+    user.save()
+    return f"Your default platform has been set to **{user.default_platform.abbreviation}**"
 
 def dm_set_platform(user: User, message: discord.Message) -> str:
     # !setplatform <session_id> <platform>
@@ -209,8 +203,9 @@ def dm_set_platform(user: User, message: discord.Message) -> str:
     session_id = parts[0]
     platform = parts[1].lower()
 
-    if platform not in consts.VALID_PLATFORMS:
-        return f"Invalid platform. Valid platforms are: `{', '.join(consts.VALID_PLATFORMS)}`"
+    platform = Platform.get_or_none(Platform.abbreviation == platform)
+    if not platform:
+        return "Invalid platform"
 
     parsed = utils.parseRange(session_id)
     if parsed:
@@ -221,14 +216,15 @@ def dm_set_platform(user: User, message: discord.Message) -> str:
             b = a
         except ValueError:
             return "Invalid session ID. Please provide a valid integer or a range in the format `start-end`."
+    successes = 0
     while a <= b:
-        operations.set_platform_for_session(
+        if operations.set_platform_for_session(
             user,
             sessionId=a,
-            platform=platform
-        )
+            platform=platform):
+            successes += 1
         a += 1
-    return f"OK! Platform has been set to **{platform}** for sessions {session_id}"
+    return f"Platform updated on {successes} session(s)"
 
 
 def dm_set_date(user: User, message: discord.Message) -> str:
@@ -377,10 +373,11 @@ def dm_receive(message: discord.Message) -> str:
         return dm_merge_game(user, message)
     elif msg.startswith("!remove"):
         return dm_remove_session(user, message)
+    elif msg == "!platforms":
+        platforms = Platform.select().order_by(Platform.abbreviation)
+        return f"Valid platforms are: `{', '.join([p.abbreviation for p in platforms])}`"
     elif msg.startswith("!platform"):
         return dm_platform(user, message)
-    elif msg.startswith("!listplatforms"):
-        return f"Valid platforms are:\n\n`{', '.join(consts.VALID_PLATFORMS)}`"
     elif msg.startswith("!setplatform"):
         return dm_set_platform(user, message)
     elif msg.startswith("!setdate"):

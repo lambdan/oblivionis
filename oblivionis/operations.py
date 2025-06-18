@@ -3,14 +3,14 @@ import logging
 
 from oblivionis import utils
 from oblivionis.models import ActivityAssets
-from oblivionis.storage import storage_v2
+from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from oblivionis.consts import MINIMUM_SESSION_LENGTH
 
 logger = logging.getLogger("operations")
 
-def get_or_create_user(userId: str, userName: str) -> storage_v2.User | None:
+def get_or_create_user(userId: str, userName: str) -> User | None:
     try:
-        user, user_created = storage_v2.User.get_or_create(id=userId, defaults={"name": userName})
+        user, user_created = User.get_or_create(id=userId, defaults={"name": userName})
         if user_created:
             logger.info("Added new user %s %s to database", userId, userName)
         logger.debug("Returning user %s", user)
@@ -19,9 +19,9 @@ def get_or_create_user(userId: str, userName: str) -> storage_v2.User | None:
         logger.error("Failed to get or create user %s: %s", userId, e)
         return None
 
-def get_or_create_game(gameName: str) -> storage_v2.Game | None:
+def get_or_create_game(gameName: str) -> Game | None:
     try:
-        game, game_created = storage_v2.Game.get_or_create(name=gameName)
+        game, game_created = Game.get_or_create(name=gameName)
         if game_created:
             logger.info("Added new game %s to database", gameName)
         logger.debug("Returning game %s", game)
@@ -30,20 +30,14 @@ def get_or_create_game(gameName: str) -> storage_v2.Game | None:
         logger.error("Failed to get or create game %s: %s", gameName, e)
         return None
     
-def get_game_by_alias(alias: str) -> storage_v2.Game | None:
+def get_game_by_alias(alias: str) -> Game | None:
     """
     Returns a game by its alias.
     If no game is found, returns None.
     """
-    try:
-        game = storage_v2.Game.get(storage_v2.Game.aliases.contains(alias))
-        logger.debug("Found game by alias '%s': %s %s", alias, game.id, game.name)
-        return game
-    except Exception as e:
-        logger.debug("Did not get game by alias '%s': %s", alias, e)
-        return None
+    return Game.get_or_none(Game.aliases.contains(alias))
 
-def add_session(user: storage_v2.User, game: storage_v2.Game, seconds: int, platform:storage_v2.Platform|None=None, timestamp:datetime.datetime|None=None) -> tuple[storage_v2.Activity|None, Exception|None]:
+def add_session(user: User, game: Game, seconds: int, platform:Platform|None=None, timestamp:datetime.datetime|None=None) -> tuple[Activity|None, Exception|None]:
     """
     Adds a new session to the database.
     Returns a tuple of (Activity, None) on success, or (None, Exception) on failure.
@@ -58,7 +52,7 @@ def add_session(user: storage_v2.User, game: storage_v2.Game, seconds: int, plat
         if timestamp is None: # Use current time if not provided
             timestamp = utils.now()
 
-        activity = storage_v2.Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
+        activity = Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
 
         logger.info("Added activity %s for user %s: %s (%s) - %s seconds @ %s",
                     activity.id, user, game, platform, seconds, timestamp.isoformat())
@@ -68,48 +62,58 @@ def add_session(user: storage_v2.User, game: storage_v2.Game, seconds: int, plat
         logger.error("Failed to add session for user %s: %s", user.id, e)
         return None, e
     
-def remove_game_images(game: storage_v2.Game) -> str:    
-    storage_v2.Game.update(small_image=None, large_image=None).where(storage_v2.Game == game).execute()
+def remove_game_images(game:Game) -> str:    
+    Game.update(small_image=None, large_image=None).where(Game == game).execute()
     logger.info("Removed images for game %s", game.name)
     return f"Images for game '{game.name}' removed successfully."
 
-def remove_session(user: storage_v2.User, sessionId: int):
-    activity = storage_v2.Activity.get(storage_v2.Activity == sessionId)
+def remove_session(user: User, sessionId: int):
+    activity = Activity.get_or_none(Activity.id == sessionId) # type: ignore
+    if not activity:
+        return f"ERROR: Session {sessionId} not found"
     if activity.user != user:
         return f"ERROR: Session {sessionId} does not belong to you"
     activity.delete_instance()
     return f"Session {sessionId} removed successfully."
 
-def merge_games(user: storage_v2.User, gameId1: int, gameId2: int):
-    game1 = storage_v2.Game.get(storage_v2.Game == gameId1)
-    game2 = storage_v2.Game.get(storage_v2.Game == gameId2)
-    storage_v2.Activity.update(game=game2).where(
-        (storage_v2.Activity.game == game1) & (storage_v2.Activity.user == user)
+def merge_games(user: User, gameId1: int, gameId2: int):
+    game1 = Game.get_or_none(Game.id == gameId1) # type: ignore
+    if not game1:
+        return f"ERROR: Game with ID {gameId1} not found"
+    game2 = Game.get_or_none(Game.id == gameId2) # type: ignore
+    if not game2:
+        return f"ERROR: Game with ID {gameId2} not found"
+    Activity.update(game=game2).where(
+        (Activity.game == game1) & (Activity.user == user)
     ).execute()
     return f"Game '{game1.name}' merged into '{game2.name}' successfully for your user"
 
-def set_game_for_activity(activity: storage_v2.Activity, newGame: storage_v2.Game) -> str:
+def set_game_for_activity(activity: Activity, newGame: Game) -> str:
     if activity.game == newGame:
         return f"Activity {activity} is already set to game {newGame}"
     oldGame = activity.game
-    storage_v2.Activity.update(game=newGame).where(storage_v2.Activity == activity).execute()
+    Activity.update(game=newGame).where(Activity == activity).execute()
     return f"Activity {activity} has been changed from **{oldGame}** to **{newGame}**"
 
-def set_default_platform(user: storage_v2.User, platform: str) -> str:
+def set_default_platform(user: User, platform: str) -> str:
     user.default_platform = platform # type: ignore
     user.save()
     return f"Your default platform is now **{user.default_platform}**"
     
-def set_platform_for_session(user: storage_v2.User, sessionId: int, platform: str) -> str:
-    activity = storage_v2.Activity.get(storage_v2.Activity == sessionId)
-    if activity.user != user:
-        return f"ERROR: Session {sessionId} does not belong to you"
+def set_platform_for_session(user: User, sessionId: int, platform: Platform) -> bool:
+    activity = Activity.get_or_none(Activity.id == sessionId) # type: ignore
+    if not activity:
+        return False
+    if activity.user.id != user.id:
+        return False
     activity.platform = platform
     activity.save()
-    return f"Platform for **{activity}** has been set to **{platform}**"
+    return True
 
-def modify_session_date(user: storage_v2.User, sessionId: int, new_date: datetime.datetime) -> str:
-    activity = storage_v2.Activity.get(storage_v2.Activity == sessionId)
+def modify_session_date(user: User, sessionId: int, new_date: datetime.datetime) -> str:
+    activity = Activity.get_or_none(Activity.id == sessionId) # type: ignore
+    if not activity:
+        return f"ERROR: Session {sessionId} not found"
     if activity.user != user:
         return f"ERROR: Session {sessionId} does not belong to you"
     activity.timestamp = new_date
