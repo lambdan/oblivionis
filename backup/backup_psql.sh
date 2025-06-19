@@ -8,4 +8,4 @@ make_backup() {
 }
 
 make_backup "oblivionis"
-make_backup "oblivionis_2"
+make_backup "storage_v2"
