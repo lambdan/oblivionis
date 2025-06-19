@@ -63,13 +63,15 @@ class Activity(BaseModel):
     Activity (V2)
     """
     timestamp = DateTimeField()
-    user = ForeignKeyField(User)
-    game = ForeignKeyField(Game)
+    user = ForeignKeyField(User, backref='activities')
+    game = ForeignKeyField(Game, backref='activities')
+    platform = ForeignKeyField(Platform, backref='activities')
     seconds = IntegerField()
-    platform = ForeignKeyField(Platform)
+    
 
 
 def connect_db():
-    db.connect()
-    db.create_tables([Platform, User, Game, Activity])
+    if db.connect():
+        logger.info("Connected to database %s", DB_NAME)
+        db.create_tables([Platform, User, Game, Activity])
     

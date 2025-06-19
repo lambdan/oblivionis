@@ -5,6 +5,8 @@ from oblivionis.globals import LOGLEVEL
 
 logger = logging.getLogger("storage_v1")
 
+DB_NAME = "oblivionis"
+
 from peewee import (
     CharField,
     DateTimeField,
@@ -18,7 +20,7 @@ from playhouse.postgres_ext import PostgresqlExtDatabase, ArrayField
 
 
 db = PostgresqlExtDatabase(
-    os.environ.get("DB_NAME"),
+    DB_NAME,
     user=os.environ.get("DB_USER"),
     password=os.environ.get("DB_PASSWORD"),
     host=os.environ.get("DB_HOST"),
