@@ -141,6 +141,6 @@ def adm_create_super_token(user: User) -> str:
     token = Token.create(
         super=True,
         user=user,
-        expires_at=datetime.datetime(2099, 12, 31, tzinfo=datetime.UTC),  
+        expires_at=None,  
         )
-    return f"Created new super token: `{token.token}`\nIt will expire on `{token.expires_at.isoformat()}`"
+    return f"Created new super token: `{token.token}`"
