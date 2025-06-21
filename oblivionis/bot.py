@@ -44,6 +44,16 @@ async def on_guild_available(guild: discord.Guild):
 async def on_presence_update(before: discord.Member, after: discord.Member):
     logger.debug("User presence changed for %s: %s -> %s", before, before.activity, after.activity)
 
+    # grab avatar
+    if after.display_avatar:
+        user, created = storage_v2.User.get_or_create(id=str(before.id), name=before.name)
+        if created:
+            logger.info("Added new user %s to database", before.name)
+        if user.avatar_url != str(after.display_avatar.url):
+            logger.info("User %s avatar changed from %s to %s", before, user.avatar_url, after.display_avatar.url)
+            user.avatar_url = str(after.display_avatar.url)
+            user.save()
+
     if after.activity == before.activity or before.activity is None:
         return
 

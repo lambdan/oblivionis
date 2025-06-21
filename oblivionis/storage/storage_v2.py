@@ -1,4 +1,5 @@
 import datetime
+import http
 import os
 import logging
 import uuid
@@ -45,6 +46,7 @@ class User(BaseModel):
     """
     id = CharField(primary_key=True)
     name = CharField()
+    avatar_url = CharField(null=True, default="https://cdn.discordapp.com/embed/avatars/0.png")
     default_platform = ForeignKeyField(Platform, default=lambda: Platform.get_or_create(abbreviation="pc")[0])
 
 
