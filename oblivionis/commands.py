@@ -362,6 +362,8 @@ def dm_receive(message: discord.Message) -> str:
             return admin_commands.adm_add_platform(message)
         elif msg.startswith("!delplatform"):
             return admin_commands.adm_del_platform(message)
+        elif msg == "!createsupertoken":
+            return admin_commands.adm_create_super_token()
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)

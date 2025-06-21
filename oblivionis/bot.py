@@ -108,7 +108,7 @@ def main():
     storage_v2.connect_db()
     migrate_v1_to_v2.migrate()
     storage_v1.disconnect_db()
-    bot.run(os.environ["TOKEN"])
+    bot.run(os.environ["DISCORD_TOKEN"])
 
 
 if __name__ == "__main__":

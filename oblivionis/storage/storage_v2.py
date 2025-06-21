@@ -1,6 +1,7 @@
 import datetime
 import os
 import logging
+import uuid
 from oblivionis.globals import LOGLEVEL
 
 DB_NAME="storage_v2"
@@ -8,6 +9,7 @@ DB_NAME="storage_v2"
 logger = logging.getLogger("storage_v2")
 
 from peewee import (
+    BooleanField,
     CharField,
     DateTimeField,
     ForeignKeyField,
@@ -68,10 +70,18 @@ class Activity(BaseModel):
     platform = ForeignKeyField(Platform, backref='activities')
     seconds = IntegerField()
     
-
+class Token(BaseModel):
+    """
+    API Token (V2)
+    """
+    token = CharField(unique=True, default=lambda: str(uuid.uuid4()))
+    discordAccess = BooleanField(default=False)
+    sgdbAccess = BooleanField(default=False)
+    created_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
+    expires_at = DateTimeField(null=True)
 
 def connect_db():
     if db.connect():
         logger.info("Connected to database %s", DB_NAME)
-        db.create_tables([Platform, User, Game, Activity])
+        db.create_tables([Platform, User, Game, Activity, Token])
     
