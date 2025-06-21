@@ -1,7 +1,7 @@
 import logging
 import discord
 from oblivionis import admin_commands, operations, utils, consts
-from oblivionis.storage.storage_v2 import User, Game, Platform, Activity, Token
+from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from typing import TypedDict, Dict
 import datetime
 
@@ -319,11 +319,7 @@ def dm_game_info(message: discord.Message) -> str:
     
     return out
 
-def dm_create_api_token(user: User) -> str:
-    # !createapitoken
-    token = Token.create(user=user)
-    out = f"Created new API token: `{token.token}`\nIt will expire on `{token.expires_at.isoformat()}`."
-    return out
+
 
 def try_expand_alias(msg: str) -> str:
     # if quotes: it should be a full title 
@@ -366,8 +362,6 @@ def dm_receive(message: discord.Message) -> str:
             return admin_commands.adm_add_platform(message)
         elif msg.startswith("!delplatform"):
             return admin_commands.adm_del_platform(message)
-        elif msg == "!createsupertoken":
-            return admin_commands.adm_create_super_token(user)
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)
@@ -398,7 +392,5 @@ def dm_receive(message: discord.Message) -> str:
         return dm_set_game(user, message)
     elif msg.startswith("!last"):
         return dm_last_sessions(user, message)
-    elif msg == "!createapitoken":
-        return dm_create_api_token(user)
     else:
         return "Unknown command. Use `!help` to see available commands."

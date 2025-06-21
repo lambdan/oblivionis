@@ -46,7 +46,7 @@ class User(BaseModel):
     """
     id = CharField(primary_key=True)
     name = CharField()
-    avatar_url = CharField(null=True, default="https://cdn.discordapp.com/embed/avatars/0.png")
+    avatar_url = CharField(null=True)
     default_platform = ForeignKeyField(Platform, default=lambda: Platform.get_or_create(abbreviation="pc")[0])
 
 
@@ -72,24 +72,9 @@ class Activity(BaseModel):
     platform = ForeignKeyField(Platform, backref='activities')
     seconds = IntegerField()
     
-class Token(BaseModel):
-    """
-    API Token (V2)
-    """
-    token = CharField(unique=True, default=lambda: str(uuid.uuid4()))
-    user = ForeignKeyField(User, backref='tokens') # Who requested the token
-    created_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
-    expires_at = DateTimeField(
-        null=True, 
-        default=lambda: datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)) 
-    last_used = DateTimeField(null=True) 
-    calls = IntegerField(default=0)  # Number of API calls made with this token
-    super = BooleanField(default=False)  # Super token has all permissions, and always will
-    discordAccess = BooleanField(default=False)
-    sgdbAccess = BooleanField(default=False)
 
 def connect_db():
     if db.connect():
         logger.info("Connected to database %s", DB_NAME)
-        db.create_tables([Platform, User, Game, Activity, Token])
+        db.create_tables([Platform, User, Game, Activity])
     
