@@ -2,8 +2,7 @@ import datetime
 import discord
 
 from oblivionis import operations
-from oblivionis.storage import storage_v2
-from oblivionis.storage.storage_v2 import Game, Platform
+from oblivionis.storage.storage_v2 import Game, Platform, Token, User
 
 
 def adm_set_game_image(message: discord.Message) -> str:
@@ -138,9 +137,10 @@ def adm_del_platform(message: discord.Message) -> str:
     platform.delete_instance()
     return "OK, deleted platform " + abbr
 
-def adm_create_super_token() -> str:
-    token = storage_v2.Token.create(
-        discordAccess=True, 
-        sgdbAccess=True
+def adm_create_super_token(user: User) -> str:
+    token = Token.create(
+        super=True,
+        user=user,
+        expires_at=datetime.datetime(2099, 12, 31, tzinfo=datetime.UTC),  
         )
-    return f"Created new super token: `{token.token}`"
+    return f"Created new super token: `{token.token}`\nIt will expire on `{token.expires_at.isoformat()}`"

@@ -43,7 +43,7 @@ class User(BaseModel):
     """
     User (V2)
     """
-    id = CharField(primary_key=True, max_length=20)
+    id = CharField(primary_key=True)
     name = CharField()
     default_platform = ForeignKeyField(Platform, default=lambda: Platform.get_or_create(abbreviation="pc")[0])
 
@@ -75,10 +75,12 @@ class Token(BaseModel):
     API Token (V2)
     """
     token = CharField(unique=True, default=lambda: str(uuid.uuid4()))
+    user = ForeignKeyField(User, backref='tokens') # Who requested the token
+    created_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
+    expires_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))  # Default to 1 year
+    super = BooleanField(default=False)  # Super token has all permissions, and always will
     discordAccess = BooleanField(default=False)
     sgdbAccess = BooleanField(default=False)
-    created_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
-    expires_at = DateTimeField(null=True)
 
 def connect_db():
     if db.connect():
