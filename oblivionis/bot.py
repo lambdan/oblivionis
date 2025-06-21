@@ -101,13 +101,4 @@ async def on_message(message: discord.Message):
     logger.info("Replying to %s: %s", message.author, reply)
     await message.author.send(reply, reference=message)
 
-def main():
-    storage_v1.connect_db()
-    storage_v2.connect_db()
-    migrate_v1_to_v2.migrate()
-    storage_v1.disconnect_db()
-    bot.run(os.environ["DISCORD_TOKEN"])
 
-
-if __name__ == "__main__":
-    main()

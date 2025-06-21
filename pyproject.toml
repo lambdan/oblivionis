@@ -9,11 +9,14 @@ dependencies = [
     "discord.py==2.5.2",
     "peewee==3.18.1",
     "psycopg2-binary>=2.9.10,<3",
-    "types-peewee==3.18.1.20250601"
+    "types-peewee==3.18.1.20250601",
+    "fastapi==0.115.13",
+    "uvicorn==0.34.3",
+    "asyncio==3.4.3"
 ]
 
 [project.scripts]
-oblivionis = "oblivionis.bot:main"
+oblivionis = "oblivionis.main:main"
 
 [build-system]
 requires = ["hatchling"]
