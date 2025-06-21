@@ -77,7 +77,10 @@ class Token(BaseModel):
     token = CharField(unique=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref='tokens') # Who requested the token
     created_at = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
-    expires_at = DateTimeField(null=True, default=lambda: datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365))  # Default to 1 year
+    expires_at = DateTimeField(
+        null=True, 
+        default=lambda: datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365)) 
+    last_used = DateTimeField(null=True) 
     calls = IntegerField(default=0)  # Number of API calls made with this token
     super = BooleanField(default=False)  # Super token has all permissions, and always will
     discordAccess = BooleanField(default=False)
