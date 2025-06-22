@@ -31,6 +31,9 @@ def list_activities(offset = 0, limit = 25, order = "desc", user: int | None = N
             (Activity.game == game) if game is not None else True,
             (Activity.platform == platform) if platform is not None else True
         )]
+    # convert timestamps to ints
+    for activity in activities:
+        activity['timestamp'] = int(activity['timestamp'].timestamp()) * 1000
     response = {
         "data": activities,
         "_total": Activity.select().count(),
