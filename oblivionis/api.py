@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from playhouse.shortcuts import model_to_dict
 
+from oblivionis import steamgriddb
 from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 
 app = FastAPI()
@@ -85,3 +86,18 @@ def get_platform(platform_id: int):
     platform = Platform.get_or_none(Platform.id == platform_id) # type: ignore
     return model_to_dict(platform) if platform else {"error": "Not found"}
 
+@app.get("/api/sgdb/search")
+def search_sgdb(query: str):
+    return steamgriddb.search(query)
+
+@app.get("/api/sgdb/grids/{game_id}")
+def grid_sgdb(game_id: int):
+    grids = steamgriddb.get_grids(game_id)
+    return grids 
+
+@app.get("/api/sgdb/grids/{game_id}/best")
+def best_grid_sgdb(game_id: int):
+    best = steamgriddb.get_best_grid(game_id)
+    if not best:
+        raise HTTPException(status_code=404, detail="Not found")
+    return best

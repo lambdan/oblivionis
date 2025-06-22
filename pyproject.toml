@@ -12,7 +12,8 @@ dependencies = [
     "types-peewee==3.18.1.20250601",
     "fastapi==0.115.13",
     "uvicorn==0.34.3",
-    "asyncio==3.4.3"
+    "asyncio==3.4.3",
+    "python-steamgriddb==1.0.5"
 ]
 
 [project.scripts]
