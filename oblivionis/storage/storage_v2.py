@@ -47,6 +47,7 @@ class User(BaseModel):
     id = CharField(primary_key=True)
     name = CharField()
     avatar_url = CharField(null=True)
+    last_active = DateTimeField(default=lambda: datetime.datetime.now(datetime.UTC))
     default_platform = ForeignKeyField(Platform, default=lambda: Platform.get_or_create(abbreviation="pc")[0])
 
 

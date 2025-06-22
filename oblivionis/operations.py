@@ -32,6 +32,9 @@ def add_session(user: User, game: Game, seconds: int, platform:Platform|None=Non
 
         activity = Activity.create(user=user, game=game, seconds=seconds, platform=platform, timestamp=timestamp)
 
+        user.last_active = timestamp # type: ignore
+        user.save()
+
         logger.info("Added activity %s for user %s: %s (%s) - %s seconds @ %s",
                     activity.id, user, game, platform, seconds, timestamp.isoformat())
         

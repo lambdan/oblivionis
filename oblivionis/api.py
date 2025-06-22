@@ -30,8 +30,8 @@ def get_user_stats(user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    first_activity = Activity.select(fn.MIN(Activity.timestamp)).where(Activity.user == user).scalar()
-    last_activity = Activity.select(fn.MAX(Activity.timestamp)).where(Activity.user == user).scalar()
+    oldest_activity = Activity.select().where(Activity.user == user).order_by(Activity.timestamp.asc()).first()
+    newest_activity = Activity.select().where(Activity.user == user).order_by(Activity.timestamp.desc()).first()
     total_playtime = Activity.select(fn.SUM(Activity.seconds)).where(Activity.user == user).scalar() or 0
     total_activities = Activity.select().where(Activity.user == user).count()
     total_games = Activity.select(Activity.game).where(Activity.user == user).distinct().count()
@@ -44,8 +44,8 @@ def get_user_stats(user_id: int):
             "games": total_games,
             "platforms": total_platforms
         },
-        "first_activity": int(first_activity.timestamp() * 1000) if first_activity else None,
-        "last_active": int(last_activity.timestamp() * 1000) if last_activity else None,
+        "oldest_activity": model_to_dict(oldest_activity),
+        "newest_activity": model_to_dict(newest_activity),
         "active_days": Activity.select(fn.COUNT(fn.DISTINCT(fn.DATE(Activity.timestamp)))).where(Activity.user == user).scalar(),
         "average": {
             "seconds_per_game": total_playtime / total_games if total_games > 0 else 0,
@@ -63,9 +63,6 @@ def list_activities(offset = 0, limit = 25, order = "desc", user: int | None = N
             (Activity.game == game) if game is not None else True,
             (Activity.platform == platform) if platform is not None else True
         )]
-    # convert timestamps to ints
-    for activity in activities:
-        activity['timestamp'] = int(activity['timestamp'].timestamp()) * 1000
     response = {
         "data": activities,
         "_total": Activity.select().where(
