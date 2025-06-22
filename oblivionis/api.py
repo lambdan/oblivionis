@@ -193,11 +193,16 @@ def get_game(game_id: int):
 #     }
 
 @app.get("/api/platforms")
-def list_platforms(offset=0, limit=25, order="desc"):
-    platforms = [model_to_dict(platform) for platform in Platform.select().offset(offset).limit(limit).order_by(Platform.abbreviation.asc() if order == "asc" else Platform.abbreviation.desc())]
+def list_platforms(offset=0, limit=25, order="desc", sort="playtime"):
+    # playtime | recency
+    if sort == "playtime":
+        data = [model_to_dict(platform) for platform in Platform.select().offset(offset).limit(limit).order_by(Platform.seconds_played.asc() if order == "asc" else Platform.seconds_played.desc())]
+    else:  # recency
+        data = [model_to_dict(platform) for platform in Platform.select().offset(offset).limit(limit).order_by(Platform.last_played.asc() if order == "asc" else Platform.last_played.desc())]
+
 
     response = {
-        "data": platforms,
+        "data": data,
         "_total": Platform.select().count(),
         "_offset": offset,
         "_limit": limit,
@@ -208,7 +213,9 @@ def list_platforms(offset=0, limit=25, order="desc"):
 @app.get("/api/platforms/{platform_id}")
 def get_platform(platform_id: int):
     platform = Platform.get_or_none(Platform.id == platform_id) # type: ignore
-    return model_to_dict(platform) if platform else {"error": "Not found"}
+    if not platform:
+        raise HTTPException(status_code=404, detail="Platform not found")
+    return model_to_dict(platform)
 
 @app.get("/api/stats")
 def get_stats():

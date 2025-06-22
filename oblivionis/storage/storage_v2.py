@@ -40,6 +40,8 @@ class Platform(BaseModel):
     """
     abbreviation = CharField(unique=True)
     name = CharField(null=True)
+    last_played = DateTimeField(null=True, default=None)
+    seconds_played = IntegerField(default=0)
 
 class User(BaseModel):
     """
@@ -119,5 +121,16 @@ def sync_totals():
         if last_activity:
             user.last_active = last_activity.timestamp
             user.save()
+
+    # Update last played and seconds played for platforms
+    for platform in Platform.select():
+        total_seconds = Activity.select(fn.SUM(Activity.seconds)).where(Activity.platform == platform).scalar() or 0
+        platform.seconds_played = total_seconds
+        
+        last_activity = Activity.select().where(Activity.platform == platform).order_by(Activity.timestamp.desc()).first()
+        if last_activity:
+            platform.last_played = last_activity.timestamp
+        
+        platform.save()
     
     logger.info("Sync complete, took %s seconds", (datetime.datetime.now(datetime.UTC) - started).total_seconds())
