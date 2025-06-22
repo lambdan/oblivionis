@@ -16,7 +16,8 @@ PASS="oblivion"
 DB="$2"
 
 # delete existing volume
-docker volume create "$VOLUME" || true
+docker volume rm "$VOLUME" ||true
+docker volume create "$VOLUME" ||true
 
 
 # start psql container

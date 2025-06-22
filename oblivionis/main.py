@@ -1,3 +1,4 @@
+import time
 import uvicorn
 import asyncio
 import os
@@ -13,10 +14,17 @@ async def start_api():
 async def start_bot():  
     await bot.start(os.environ["DISCORD_TOKEN"])
 
+async def start_sync():
+    while True:
+        await asyncio.sleep(60) 
+        storage_v2.sync_totals()
+        
+
 async def main():
     await asyncio.gather(
         start_api(),
-        start_bot()
+        start_bot(),
+        start_sync()
     )
 
 if __name__ == "__main__":
