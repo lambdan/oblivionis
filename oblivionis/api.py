@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from playhouse.shortcuts import model_to_dict
+from peewee import fn
 
 from oblivionis import steamgriddb
 from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
@@ -22,6 +23,36 @@ def list_users(offset=0, limit=25, order="desc"):
 def get_user(user_id: int):
     user = User.get_or_none(User.id == user_id)
     return model_to_dict(user) if user else {"error": "Not found"}
+
+@app.get("/api/users/{user_id}/stats")
+def get_user_stats(user_id: int):
+    user = User.get_or_none(User.id == user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    first_activity = Activity.select(fn.MIN(Activity.timestamp)).where(Activity.user == user).scalar()
+    last_activity = Activity.select(fn.MAX(Activity.timestamp)).where(Activity.user == user).scalar()
+    total_playtime = Activity.select(fn.SUM(Activity.seconds)).where(Activity.user == user).scalar() or 0
+    total_activities = Activity.select().where(Activity.user == user).count()
+    total_games = Activity.select(Activity.game).where(Activity.user == user).distinct().count()
+    total_platforms = Activity.select(Activity.platform).where(Activity.user == user).distinct().count()
+
+    return {
+        "total": {
+            "seconds": total_playtime,
+            "activities": total_activities,
+            "games": total_games,
+            "platforms": total_platforms
+        },
+        "first_activity": int(first_activity.timestamp() * 1000) if first_activity else None,
+        "last_active": int(last_activity.timestamp() * 1000) if last_activity else None,
+        "active_days": Activity.select(fn.COUNT(fn.DISTINCT(fn.DATE(Activity.timestamp)))).where(Activity.user == user).scalar(),
+        "average": {
+            "seconds_per_game": total_playtime / total_games if total_games > 0 else 0,
+            "sessions_per_game": total_activities / total_games if (total_activities > 0 and total_games > 0) else 0,
+            "session_length": total_playtime / total_activities if (total_activities > 0 and total_playtime > 0) else 0,
+        }
+    }
 
 @app.get("/api/activities")
 def list_activities(offset = 0, limit = 25, order = "desc", user: int | None = None, game: int | None = None, platform: int | None = None):
