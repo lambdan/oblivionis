@@ -11,12 +11,12 @@ def list_users(offset=0, limit=25, order="desc"):
     users = [model_to_dict(user) for user in User.select().offset(offset).limit(limit).order_by(User.id.asc() if order == "asc" else User.id.desc())]
     response = {
         "data": users,
-        "_total": Activity.select().count(),
+        "_total": User.select().count(),
         "_offset": offset,
         "_limit": limit,
         "_order": order
     }
-    return users
+    return response 
 
 @app.get("/api/users/{user_id}")
 def get_user(user_id: int):
