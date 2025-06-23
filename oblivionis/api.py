@@ -22,6 +22,8 @@ def fixDatetime(data):
     Recursively converts datetime objects in a dictionary to milliseconds since epoch
     """
     if isinstance(data, datetime.datetime):
+        if data.tzinfo is None:
+            data = data.replace(tzinfo=datetime.timezone.utc)
         return int(data.timestamp() * 1000)
     
     if not isinstance(data, (dict, list)):

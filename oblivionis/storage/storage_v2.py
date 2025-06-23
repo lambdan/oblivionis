@@ -1,9 +1,5 @@
-import datetime
-import http
 import os
 import logging
-import uuid
-from oblivionis.globals import LOGLEVEL
 
 DB_NAME="storage_v2"
 
