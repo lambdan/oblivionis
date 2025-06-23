@@ -252,13 +252,11 @@ def list_platforms(offset=0, limit=25):
 @app.get("/api/stats")
 def get_stats():
     return {
-        "total": {
-            "seconds": get_total_playtime(),
-            "users": get_total_users(),
-            "games": get_game_count(),
-            "activities": get_activity_count(),
-            "platforms": get_platform_count()
-        }
+        "total_playtime": get_total_playtime(),
+        "activities": get_activity_count(),
+        "users": get_user_count(),
+        "games": get_game_count(),
+        "platforms": get_platform_count(),
     }
 
 @app.get("/api/stats/total_playtime")
@@ -294,7 +292,7 @@ def get_activity_count(userId: int | None = None, gameId: int | None = None) -> 
     return Activity.select().count()
 
 @app.get("/api/stats/total_users")
-def get_total_users() -> int:
+def get_user_count() -> int:
     return User.select().count()
 
 @app.get("/api/stats/total_games")
@@ -344,6 +342,6 @@ def best_grid_sgdb(game_id: int):
 # Discord
 ###############
 
-@app.get("/api/discord/{user_id}/avatar")
-def get_discord_avatar(user_id: int) -> str:
-    return bot.avatar_from_discord_user_id(user_id)
+@app.get("/api/discord/{discord_user_id}/avatar")
+def get_discord_avatar(discord_user_id: int) -> str:
+    return bot.avatar_from_discord_user_id(discord_user_id)
