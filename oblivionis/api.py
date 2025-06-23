@@ -343,5 +343,5 @@ def best_grid_sgdb(game_id: int):
 ###############
 
 @app.get("/api/discord/{discord_user_id}/avatar")
-def get_discord_avatar(discord_user_id: int) -> str:
-    return bot.avatar_from_discord_user_id(discord_user_id)
+def get_discord_avatar(discord_user_id: int):
+    return {"url": bot.avatar_from_discord_user_id(discord_user_id)}
