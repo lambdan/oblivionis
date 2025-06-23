@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from oblivionis import utils
-from oblivionis.storage.storage_v2 import User, Game, Platform, Activity, sync_totals
+from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from oblivionis.consts import MINIMUM_SESSION_LENGTH
 
 logger = logging.getLogger("operations")
@@ -33,8 +33,7 @@ def add_session(user: User, game: Game, seconds: int, platform:Platform|None=Non
 
         logger.info("Added activity %s for user %s: %s (%s) - %s seconds @ %s",
                     activity.id, user, game, platform, seconds, timestamp.isoformat())
-        
-        sync_totals() # Refresh totals after adding a new session
+    
         
         return activity, None
     except Exception as e:

@@ -39,5 +39,4 @@ def migrate():
     storage_v1.Game.drop_table()
     storage_v1.User.drop_table()
     reset_sequences([storage_v2.Platform, storage_v2.Game, storage_v2.Activity])
-    storage_v2.sync_totals()
     logger.info("Migration completed successfully :D")
