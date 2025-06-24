@@ -35,11 +35,8 @@ def platform_from_discord_activity(activity: discord.Activity) -> storage_v2.Pla
     platformName = activity.platform or "pc"
     return storage_v2.Platform.get_or_create(abbreviation=platformName)[0]
 
+
 def avatar_from_discord_user_id(id: int) -> str:
-    """
-    Returns the avatar URL for a Discord user ID.
-    If the user has no avatar, returns a default avatar URL.
-    """
     user = bot.get_user(id)
     if user and user.display_avatar:
         return str(user.display_avatar.url)

@@ -7,6 +7,10 @@ from oblivionis import bot
 from oblivionis import steamgriddb
 from oblivionis.models import GameWithStats, PaginatedResponse, PlatformWithStats, UserWithStats
 from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
+import time
+import logging
+
+logger = logging.getLogger("api")
 
 app = FastAPI()
 
@@ -454,6 +458,17 @@ def best_grid_sgdb(game_id: int):
 # Discord
 ###############
 
+discord_avatar_cache = {}
 @app.get("/api/discord/{discord_user_id}/avatar")
 def get_discord_avatar(discord_user_id: int):
-    return {"url": bot.avatar_from_discord_user_id(discord_user_id)}
+    now = time.time()
+    cache_entry = discord_avatar_cache.get(discord_user_id)
+    if cache_entry:
+        url, timestamp = cache_entry
+        if now - timestamp < 86400:  # 24 hours in seconds
+            logger.debug("Returning cached avatar for user %s", discord_user_id)
+            return {"url": url}
+    logger.debug("Fetching avatar for user %s from Discord", discord_user_id)
+    url = bot.avatar_from_discord_user_id(discord_user_id)
+    discord_avatar_cache[discord_user_id] = (url, now)
+    return {"url": url}
