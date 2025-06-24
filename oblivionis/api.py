@@ -223,15 +223,15 @@ def get_game_stats(game_id: int):
     oldest_activity = Activity.select().where(Activity.game == game).order_by(Activity.timestamp.asc()).first()
     newest_activity = Activity.select().where(Activity.game == game).order_by(Activity.timestamp.desc()).first()
     total_playtime = get_total_playtime(gameId=game.id)
-    total_activities = get_activity_count(gameId=game.id)
-    total_platforms = get_platform_count(gameId=game.id)
+    activity_count = get_activity_count(gameId=game.id)
+    platform_count = get_platform_count(gameId=game.id)
+    player_count = Activity.select(Activity.user).where(Activity.game == game).distinct().count()
 
     return fixDatetime({
-        "total": {
-            "seconds": total_playtime,
-            "activities": total_activities,
-            "platforms": total_platforms
-        },
+        "total_playtime": total_playtime,
+        "activity_count": activity_count,
+        "platform_count": platform_count,
+        "player_count": player_count,
         "oldest_activity": model_to_dict(oldest_activity) if oldest_activity else None,
         "newest_activity": model_to_dict(newest_activity) if newest_activity else None,
     })
@@ -377,6 +377,40 @@ def get_platform_count(userId: int | None = None, gameId: int | None = None) -> 
             Activity.game == gameId
         ).distinct().count()
     return Activity.select(Activity.platform).distinct().count()
+
+##############
+# For chart.js
+##############
+
+@app.get("/api/stats/chart/playtime_by_day")
+def get_playtime_by_day(userId: int | None = None, gameId: int | None = None, platformId: int | None = None):
+    query = Activity.select(
+        fn.DATE(Activity.timestamp).alias('date'),
+        fn.SUM(Activity.seconds).alias('total_seconds')
+    ).group_by(fn.DATE(Activity.timestamp))
+    conditions = []
+    if userId:
+        conditions.append(Activity.user == userId)
+    if gameId:
+        conditions.append(Activity.game == gameId)
+    if platformId:
+        conditions.append(Activity.platform == platformId)
+    if conditions:
+        query = query.where(*conditions)
+    results = query.order_by(fn.DATE(Activity.timestamp)).tuples()
+    data = {
+        "labels": [],
+        "datasets": [{
+            "label": "Playtime (seconds)",
+            "data": []
+        }]
+    }
+    for date, total_seconds in results:
+        data["labels"].append(date.strftime("%Y-%m-%d"))
+        data["datasets"][0]["data"].append(total_seconds)
+    return data
+    
+
 
 ###############
 # SteamGridDB
