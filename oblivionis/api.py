@@ -214,6 +214,63 @@ def get_game(gameId: int, userId: int | None = None):
 
     return fixDatetime(entry)
 
+@app.get("/api/games/{game_id}/stats")
+def get_game_stats(game_id: int):
+    game = Game.get_or_none(Game.id == game_id) # type: ignore
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    oldest_activity = Activity.select().where(Activity.game == game).order_by(Activity.timestamp.asc()).first()
+    newest_activity = Activity.select().where(Activity.game == game).order_by(Activity.timestamp.desc()).first()
+    total_playtime = get_total_playtime(gameId=game.id)
+    total_activities = get_activity_count(gameId=game.id)
+    total_platforms = get_platform_count(gameId=game.id)
+
+    return fixDatetime({
+        "total": {
+            "seconds": total_playtime,
+            "activities": total_activities,
+            "platforms": total_platforms
+        },
+        "oldest_activity": model_to_dict(oldest_activity) if oldest_activity else None,
+        "newest_activity": model_to_dict(newest_activity) if newest_activity else None,
+    })
+
+@app.get("/api/games/{gameId}/players")
+def get_game_players(gameId: int):
+    game = Game.get_or_none(Game.id == gameId) # type: ignore
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    players = []
+    for user in User.select():
+        total_playtime = get_total_playtime(userId=user.id, gameId=game.id)
+        if total_playtime > 0:
+            players.append({
+                "user": model_to_dict(user),  # type: ignore
+                "total_playtime": total_playtime,
+                "last_played": get_last_activity(userid=user.id, gameid=game.id)["timestamp"], # type: ignore
+                "total_sessions": get_activity_count(userId=user.id, gameId=game.id),
+            })
+    return fixDatetime(players)
+
+@app.get("/api/games/{gameId}/platforms")
+def get_game_platforms(gameId: int):
+    game = Game.get_or_none(Game.id == gameId) # type: ignore
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    platforms = []
+    for platform in Platform.select():
+        total_playtime = get_total_playtime(gameId=game.id, platformId=platform.id)
+        if total_playtime > 0:
+            platforms.append({
+                "platform": model_to_dict(platform),  # type: ignore
+                "total_playtime": total_playtime,
+                "last_played": get_last_activity(gameid=game.id, platformid=platform.id)["timestamp"], # type: ignore
+                "total_sessions": get_activity_count(gameId=game.id, platformId=platform.id),
+                "percent": total_playtime / get_total_playtime(gameId=game.id) if get_total_playtime(gameId=game.id) > 0 else 0
+            })
+    return fixDatetime(platforms)
 
 
 ##############
@@ -282,19 +339,16 @@ def get_total_playtime(userId: int | None = None, gameId: int | None = None, pla
     return query.scalar() or 0
 
 @app.get("/api/stats/total_activities")
-def get_activity_count(userId: int | None = None, gameId: int | None = None) -> int:
-    if userId and gameId:
-        return Activity.select().where(
-            (Activity.user == userId) & (Activity.game == gameId)
-        ).count()
+def get_activity_count(userId: int | None = None, gameId: int | None = None, platformId: int | None = None) -> int:
+    conditions = []
     if userId:
-        return Activity.select().where(
-            Activity.user == userId
-        ).count()
+        conditions.append(Activity.user == userId)
     if gameId:
-        return Activity.select().where(
-            Activity.game == gameId
-        ).count()
+        conditions.append(Activity.game == gameId)
+    if platformId:
+        conditions.append(Activity.platform == platformId)
+    if len(conditions) > 0:
+        return Activity.select().where(*conditions).count()
     return Activity.select().count()
 
 @app.get("/api/stats/total_users")
