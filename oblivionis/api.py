@@ -88,6 +88,24 @@ def get_user_games(userId: int, offset = 0, limit = 25):
 
     return fixDatetime(paginatedResponse)
 
+@app.get("/api/users/{userId}/platforms")
+def get_user_platforms(userId: int):
+    user = User.get_or_none(User.id == userId) # type: ignore
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    platforms = []
+    for platform in Platform.select():
+        total_playtime = get_total_playtime(userId=user.id, platformId=platform.id)
+        if total_playtime > 0:
+            platforms.append({
+                "platform": model_to_dict(platform),  # type: ignore
+                "total_playtime": total_playtime,
+                "last_played": get_last_activity(userid=user.id, platformid=platform.id)["timestamp"], # type: ignore
+                "total_sessions": get_activity_count(userId=user.id, platformId=platform.id),
+                "percent": total_playtime / get_total_playtime(userId=user.id) if get_total_playtime(userId=user.id) > 0 else 0
+            })
+    return fixDatetime(platforms)
+
 
 @app.get("/api/users/{user_id}/stats")
 def get_user_stats(user_id: int):
