@@ -33,6 +33,8 @@ def platform_from_discord_activity(activity: discord.Activity) -> storage_v2.Pla
     if activity.name == "Steam Deck":
         return storage_v2.Platform.get_or_create(abbreviation="steamdeck")[0]
     platformName = activity.platform or "pc"
+    if platformName == "desktop": # some games report "desktop" apparently
+        platformName = "pc"
     return storage_v2.Platform.get_or_create(abbreviation=platformName)[0]
 
 
