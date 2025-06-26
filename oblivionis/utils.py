@@ -15,11 +15,6 @@ def datetimeFromISO8601(s: str) -> datetime.datetime | None:
     """
     try:
         s = s.upper().strip()
-        parsed = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
-        now = datetime.datetime.now(datetime.UTC)
-        if parsed > now:
-            logger.warning("Parsed datetime %s is in the future compared to now %s", parsed, now)
-            return None
         return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
     except Exception as e:
         return None
@@ -92,3 +87,17 @@ def normalizeQuotes(s: str) -> str:
     Remove dumb Apple quotes and replaces them with standard quotes
     """
     return s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'").replace("’", "'").replace("`", "'").replace("´", "'")
+
+def validateDate(date: datetime.datetime) -> str:
+    """
+    Returns OK if valid
+    """
+    now = datetime.datetime.now(datetime.UTC)
+    if date > now:
+        return "Date cannot be in the future"
+    
+    if date < datetime.datetime(2025, 1, 20, tzinfo=datetime.UTC):
+        return "Date cannot be before 2025-01-20 (timeplayed started then!)"
+    
+    return "OK"
+

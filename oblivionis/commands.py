@@ -3,7 +3,6 @@ import discord
 from oblivionis import admin_commands, operations, utils, consts
 from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
 from typing import TypedDict, Dict
-import datetime
 
 from oblivionis.globals import ADMINS
 from oblivionis.models import ManualSession
@@ -95,8 +94,18 @@ def dm_add_session(user: User, message: str) -> str:
     else:
         duration = utils.secsFromString(last)
 
+    if timestamp is None:
+        timestamp = utils.now()
+    
+    dateValid = utils.validateDate(timestamp)
+    if dateValid != "OK":
+        return f"ERROR: {dateValid}"
+    
     if duration is None:
         return "ERROR: Duration is invalid"
+    
+    if duration > (3600*4):
+        return "ERROR: Duration is too long. Maximum is 4 hours (14400 seconds). Split up into multiple sessions if needed."
     
     game, created = Game.get_or_create(name=gameName)
     
@@ -107,7 +116,7 @@ def dm_add_session(user: User, message: str) -> str:
                     timestamp=timestamp)
     sesh = result[0]
     if sesh:
-        return f"Session #{sesh} saved"
+        return f"Session #{sesh} saved.\nYou played **{ game.name }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))} at {timestamp.isoformat().split('.')[0]} UTC"
     return f"ERROR: {result[1]}"
 
 def dm_start_session(user: User, msg: str) -> str:
@@ -158,7 +167,7 @@ def dm_stop_session(user: User, message: discord.Message) -> str:
     
     sesh = result[0]
     if sesh:
-        return f"Session #{sesh} saved.\nYou played **{ session["game"] }** on **{ session["platform"].abbreviation }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
+        return f"Session #{sesh} saved.\nYou played **{ session["game"].name }** on **{ session["platform"].abbreviation }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
     
     if isinstance(result[1], ValueError):
         return "Session ended, but not saved because it was too short"
