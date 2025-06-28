@@ -20,10 +20,10 @@ async def async_main():
     )
 
 def main():
-    storage_v1.connect_db()
+    #storage_v1.connect_db()
     storage_v2.connect_db()
-    migrate_v1_to_v2.migrate()
-    storage_v1.disconnect_db()
+    #migrate_v1_to_v2.migrate()
+    #storage_v1.disconnect_db()
     asyncio.run(async_main())
 
 if __name__ == "__main__":
