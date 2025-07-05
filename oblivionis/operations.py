@@ -41,7 +41,7 @@ def add_session(user: User, game: Game, seconds: int, platform:Platform|None=Non
         return None, e
     
 def remove_game_images(game:Game) -> str:    
-    Game.update(small_image=None, large_image=None).where(Game == game).execute()
+    Game.update(small_image=None, large_image=None).where(Game.id == game.id).execute() # type: ignore
     logger.info("Removed images for game %s", game.name)
     return f"Images for game '{game.name}' removed successfully."
 
