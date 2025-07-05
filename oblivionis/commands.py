@@ -317,7 +317,7 @@ def dm_set_game(user: User, message: discord.Message) -> str:
             return f"Session {a} does not belong to you."
         if activity.game == game:
             return f"Session {a} is already set to game {game.name}."
-        Activity.update(game=game).where(Activity == activity).execute()
+        Activity.update(game=game).where(Activity.id == activity.id).execute() # type: ignore
         a += 1
     return f"Game has been set to **{game.name}** for session(s) {session_ids}."
 
