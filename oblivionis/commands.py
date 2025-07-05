@@ -1,11 +1,10 @@
+import datetime
 import logging
 import discord
 from oblivionis import admin_commands, operations, utils, consts
-from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
-from typing import TypedDict, Dict
+from oblivionis.storage.storage_v2 import LiveActivity, User, Game, Platform, Activity
 
 from oblivionis.globals import ADMINS
-from oblivionis.models import ManualSession
 
 logger = logging.getLogger("commands")
 
@@ -22,6 +21,7 @@ def dm_help(isAdmin: bool) -> str:
 # Manual start/stop:
 - `!start "Game Name"|alias` - Start a manual session
 - `!stop` - Stop the current manually started session
+- `!time` - Show the current running session time (if any)
 
 # Sessions:
 - `!last [n]` - Shows your last n sessions (default is 1, max is 10)
@@ -62,9 +62,6 @@ def dm_help(isAdmin: bool) -> str:
         return base + admin
     return base
 
-
-
-MANUAL_SESSIONS: dict[str, ManualSession] = {}
 
 def user_from_message(message: discord.Message) -> User | None:
     if message.author is None:
@@ -122,9 +119,9 @@ def dm_add_session(user: User, message: str) -> str:
 def dm_start_session(user: User, msg: str) -> str:
     # !start "Game Name"
     # !start "Game Name" <platform>
-    userId = str(user.id)
-    if userId in MANUAL_SESSIONS:
-        return 'You already have a manual session running. Please `!stop` before starting a new one.'
+    runningSession = LiveActivity.get_or_none(LiveActivity.user == user)
+    if runningSession:
+        return "You already have a session running. Use `!stop` to end it first."
 
     msg = msg.removeprefix('!start "').strip()
 
@@ -141,40 +138,59 @@ def dm_start_session(user: User, msg: str) -> str:
     game, created = Game.get_or_create(name=gameName)
     if created:
         logger.info("Added new game %s to database", gameName)
-    
-    MANUAL_SESSIONS[userId] = { # type: ignore
-        "game": game,
-        "platform": platform,
-        "startTime": utils.now()
-    }
-    return f"Started playing **{game.name}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
+
+    live = LiveActivity.create(
+        user=user,
+        game=game,
+        platform=platform,
+        started=utils.now()
+    )
+    return f"⏱️ Started playing **{game.name}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: User, message: discord.Message) -> str:
     # !stop
-    userId = str(user.id)
-    if userId not in MANUAL_SESSIONS:
-        return "You don't have a manual session running"
+    live = LiveActivity.get_or_none(LiveActivity.user == user)
+    if not live:
+        return "You don't have a session running"
     
-    session = MANUAL_SESSIONS.pop(userId)
-    duration = utils.now() - session["startTime"]
+    started: datetime.datetime = live.started
+    if started.tzinfo is None:
+        # tz info is lost in the database, assume UTC
+        started = started.replace(tzinfo=datetime.timezone.utc)
+    duration = utils.now() - started
     seconds = int(duration.total_seconds())
 
     result = operations.add_session(
                 user=user,
-                platform=session["platform"],
-                game=session["game"],
+                platform=live.platform,
+                game=live.game,
                 seconds=seconds)
     
     sesh = result[0]
+    live.delete_instance()  # Remove the live session from db
     if sesh:
-        return f"Session #{sesh} saved.\nYou played **{ session["game"].name }** on **{ session["platform"].abbreviation }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
+        return f"✅ Session #{sesh} saved.\nYou played **{ sesh.game.name }** on **{ sesh.platform.abbreviation }** for {utils.secsToHHMMSS(int(str(sesh.seconds)))}"
     
     if isinstance(result[1], ValueError):
         return "Session ended, but not saved because it was too short"
-    # internal failure
-    MANUAL_SESSIONS[userId] = session
-    return f"ERROR: Could not save session. Your session will keep running. Please try again."
     
+    return "Something went wrong..."
+
+def dm_time_session(user: User, message: discord.Message) -> str:
+    # !time
+    live = LiveActivity.get_or_none(LiveActivity.user == user)
+    if not live:
+        return "You don't have a session running"
+    
+    started: datetime.datetime = live.started
+    if started.tzinfo is None:
+        # tz info is lost in the database, assume UTC
+        started = started.replace(tzinfo=datetime.timezone.utc)
+    
+    duration = utils.now() - started
+    seconds = int(duration.total_seconds())
+    
+    return f"⏱️ You have been playing for {utils.secsToHHMMSS(seconds)}. \nSend `!stop` to end the session."
 
 def dm_merge_game(user: User, message: discord.Message) -> str:
     # !merge 123 456 
@@ -384,6 +400,8 @@ def dm_receive(message: discord.Message) -> str:
         return dm_start_session(user, msg)
     elif msg.startswith("!stop"):
         return dm_stop_session(user, message)
+    elif msg.startswith("!time"):
+        return dm_time_session(user, message)
     elif msg.startswith("!merge"):
         return dm_merge_game(user, message)
     elif msg.startswith("!remove"):

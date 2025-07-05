@@ -67,10 +67,15 @@ class Activity(BaseModel):
     game = ForeignKeyField(Game, backref='activities')
     platform = ForeignKeyField(Platform, backref='activities')
     seconds = IntegerField()
-    
+
+class LiveActivity(BaseModel):
+    user = ForeignKeyField(User, backref='live_activities')
+    game = ForeignKeyField(Game, backref='live_activities')
+    platform = ForeignKeyField(Platform, backref='live_activities')
+    started = DateTimeField()    
 
 def connect_db():
     if db.connect():
         logger.info("Connected to database %s", DB_NAME)
-        db.create_tables([Platform, User, Game, Activity])
+        db.create_tables([Platform, User, Game, Activity, LiveActivity])
     

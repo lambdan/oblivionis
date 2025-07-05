@@ -8,11 +8,6 @@ class ActivityAssets(TypedDict):
     small_image_url: str | None
     large_image_url: str | None
 
-class ManualSession(TypedDict):
-    game: Game
-    platform: Platform
-    startTime: datetime.datetime
-
 class PaginatedResponse(TypedDict):
     data: Any = None # type: ignore
     _total: int
