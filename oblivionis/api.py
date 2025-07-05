@@ -6,7 +6,7 @@ from peewee import fn
 from oblivionis import bot
 from oblivionis import steamgriddb
 from oblivionis.models import GameWithStats, PaginatedResponse, PlatformWithStats, UserWithStats
-from oblivionis.storage.storage_v2 import User, Game, Platform, Activity
+from oblivionis.storage.storage_v2 import LiveActivity, User, Game, Platform, Activity
 import time
 import logging
 
@@ -174,7 +174,7 @@ def get_activity(activity_id: int):
     activity = Activity.get_or_none(Activity.id == activity_id) # type: ignore
     return fixDatetime(model_to_dict(activity)) if activity else {"error": "Not found"}
 
-@app.get("/api/last_activity")
+@app.get("/api/activities/last")
 def get_last_activity(userid: int | None = None, gameid: int | None = None, platformid: int | None = None):
     """
     Returns the last activity for a user, game or platform.
@@ -195,6 +195,11 @@ def get_last_activity(userid: int | None = None, gameid: int | None = None, plat
         raise HTTPException(status_code=404, detail="No activity found")
 
     return fixDatetime(model_to_dict(last_activity))
+
+@app.get("/api/activities/live")
+def get_live_activities():
+    live_activities = LiveActivity.select()
+    return fixDatetime([model_to_dict(activity) for activity in live_activities])
 
 ##############
 # Games
