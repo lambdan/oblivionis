@@ -55,7 +55,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
     storage_v2.DiscordHistory.create(
         event="presence_update",
         user=str(before.id),
-        message=f"{before.activity} -> {after.activity}"
+        message=f"{before.activity} -> {after.activity}"[0:250]
     )
 
     if after.activity == before.activity or before.activity is None:
@@ -116,7 +116,7 @@ async def on_message(message: discord.Message):
     storage_v2.DiscordHistory.create(
         event="received_message",
         user=str(message.author.id),
-        message=f"{message.content}"
+        message=str(message.content)[0:250]
     )
 
     reply = ""
@@ -132,7 +132,7 @@ async def on_message(message: discord.Message):
     storage_v2.DiscordHistory.create(
         event="reply",
         user=str(message.author.id),
-        message=str(reply)
+        message=str(reply[0:250])
     )
     await message.author.send(reply, reference=message)
 
