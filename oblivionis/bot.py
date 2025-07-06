@@ -65,7 +65,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         user, created = storage_v2.User.get_or_create(id=str(before.id), name=before.name)
         
         platform = platform_from_discord_activity(activity)
-        logger.info("%s has stopped playing %s on %s after %s seconds", before, game, platform, seconds)
+        logger.info("%s stopped playing %s (%s), %s seconds", before, game.name, platform.abbreviation, seconds)
         add_session(
             user=user,
             game=game,
@@ -76,7 +76,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         activity: discord.Activity = after.activity # type: ignore
         game = game_from_discord_activity(activity)
         platform = platform_from_discord_activity(activity)
-        logger.info("%s has started playing %s on %s", after, game, platform)
+        logger.info("%s started playing %s (%s)", after, game.name, platform.abbreviation)
 
 
 @bot.event
