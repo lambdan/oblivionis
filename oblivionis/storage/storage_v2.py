@@ -79,9 +79,9 @@ class LiveActivity(BaseModel):
 
 class DiscordHistory(BaseModel):
     timestamp = DateTimeField(default=lambda: utils.now())
-    event = CharField()
+    event = TextField()
     user = CharField(null=True)  # Discord user ID if applicable
-    message = CharField()
+    message = TextField()
 
 def connect_db():
     if db.connect():
