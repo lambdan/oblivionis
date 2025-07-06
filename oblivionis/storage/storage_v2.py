@@ -1,6 +1,8 @@
 import os
 import logging
 
+from oblivionis import utils
+
 DB_NAME="storage_v2"
 
 logger = logging.getLogger("storage_v2")
@@ -74,8 +76,14 @@ class LiveActivity(BaseModel):
     platform = ForeignKeyField(Platform, backref='live_activities')
     started = DateTimeField()    
 
+class DiscordHistory(BaseModel):
+    timestamp = DateTimeField(default=lambda: utils.now())
+    event = CharField()
+    user = CharField(null=True)  # Discord user ID if applicable
+    message = CharField()
+
 def connect_db():
     if db.connect():
         logger.info("Connected to database %s", DB_NAME)
-        db.create_tables([Platform, User, Game, Activity, LiveActivity])
+        db.create_tables([Platform, User, Game, Activity, LiveActivity, DiscordHistory])
     

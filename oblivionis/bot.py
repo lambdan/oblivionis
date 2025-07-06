@@ -2,7 +2,7 @@ import os, logging, datetime
 import discord
 from discord.ext import commands
 
-from oblivionis.storage import migrate_v1_to_v2, storage_v1, storage_v2
+from oblivionis.storage import storage_v2
 from oblivionis.commands import dm_receive
 from oblivionis.operations import add_session
 from oblivionis.globals import DEBUG, LOGLEVEL
@@ -52,6 +52,11 @@ async def on_guild_available(guild: discord.Guild):
 @bot.event
 async def on_presence_update(before: discord.Member, after: discord.Member):
     logger.debug("User presence changed for %s: %s -> %s", before, before.activity, after.activity)
+    storage_v2.DiscordHistory.create(
+        event="presence_update",
+        user=str(before.id),
+        message=f"{before.activity} -> {after.activity}"
+    )
 
     if after.activity == before.activity or before.activity is None:
         return
@@ -65,7 +70,12 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         user, created = storage_v2.User.get_or_create(id=str(before.id), name=before.name)
         
         platform = platform_from_discord_activity(activity)
-        logger.info("%s stopped playing %s (%s), %s seconds", before, game.name, platform.abbreviation, seconds)
+        logger.info("%s stopped playing \"%s\" (%s), %s seconds", before, game.name, platform.abbreviation, seconds)
+        storage_v2.DiscordHistory.create(
+            event="stopped_playing",
+            user=str(before.id),
+            message=f"{game.name} ({platform.abbreviation}), {seconds} seconds"
+        )
         add_session(
             user=user,
             game=game,
@@ -76,7 +86,12 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         activity: discord.Activity = after.activity # type: ignore
         game = game_from_discord_activity(activity)
         platform = platform_from_discord_activity(activity)
-        logger.info("%s started playing %s (%s)", after, game.name, platform.abbreviation)
+        logger.info("%s started playing \"%s\" (%s)", after, game.name, platform.abbreviation)
+        storage_v2.DiscordHistory.create(
+            event="started_playing",
+            user=str(after.id),
+            message=f"{game.name} ({platform.abbreviation})"
+        )
 
 
 @bot.event
@@ -98,6 +113,12 @@ async def on_message(message: discord.Message):
             return
         message.content = message.content[1:]
 
+    storage_v2.DiscordHistory.create(
+        event="received_message",
+        user=str(message.author.id),
+        message=f"{message.content}"
+    )
+
     reply = ""
 
     try:
@@ -108,6 +129,11 @@ async def on_message(message: discord.Message):
         reply = f"ERROR: {e}"
     
     logger.info("Replying to %s: %s", message.author, reply)
+    storage_v2.DiscordHistory.create(
+        event="reply",
+        user=str(message.author.id),
+        message=str(reply)
+    )
     await message.author.send(reply, reference=message)
 
 
