@@ -2,6 +2,7 @@ import os
 import logging
 
 from oblivionis import utils
+from oblivionis.storage.reset_sequence import reset_sequences
 
 DB_NAME="storage_v2"
 
@@ -86,4 +87,5 @@ def connect_db():
     if db.connect():
         logger.info("Connected to database %s", DB_NAME)
         db.create_tables([Platform, User, Game, Activity, LiveActivity, DiscordHistory])
+        reset_sequences([Platform, Game, Activity, LiveActivity, DiscordHistory])
     
