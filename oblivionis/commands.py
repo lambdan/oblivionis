@@ -101,8 +101,8 @@ def dm_add_session(user: User, message: str) -> str:
     if duration is None:
         return "ERROR: Duration is invalid"
     
-    if duration > (3600*4):
-        return "ERROR: Duration is too long. Maximum is 4 hours (14400 seconds). Split up into multiple sessions if needed."
+    if duration > (3600*16):
+        return "ERROR: Duration is too long (max 16 hours)"
     
     game, created = Game.get_or_create(name=gameName)
     
