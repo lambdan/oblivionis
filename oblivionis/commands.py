@@ -10,44 +10,36 @@ logger = logging.getLogger("commands")
 
 def dm_help(isAdmin: bool) -> str:
     base = """
-# Help:
-- `!help` - Show this message
+# Datetime 📆
+- Anywhere a datetime is expected, you can use ISO8601 format (e.g. `2023-10-01T12:00:00Z`) or relative time (e.g. `-1h30m5s`)
+- Typically if its omitted it will default to now
 
-# Manual addition:
+# Manual entries:
 - `!add "Game Name"|alias <duration> [datetime]` - Add a session of specified duration
-    - If datetime is not provided, current time is used
-    - If datetime is provided, it should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
-
-# Manual start/stop:
-- `!start "Game Name"|alias` - Start a manual session
+- `!start "Game Name"|alias [platform] [datetime]`
 - `!stop` - Stop the current manually started session
 - `!time` - Show the current running session time (if any)
 
-# Sessions:
-- `!last [n]` - Shows your last n sessions (default is 1, max is 10)
-
 # Maintenance:
-- `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2
+- `!last [n]` - Shows your last n sessions (default is 1, max is 10)
+- `!merge <game_id1> <game_id2>` - Merge game_id1 into game_id2 (only affects your sessions)
 - `!remove <session_id>` - Remove session with id
+- `!setdate <session_id> <datetime>` - Change date of a session
 
-## Date:
-- `!setdate <session_id> <datetime>` - Modify the date of a session. Date should be in ISO8601 UTC format (e.g. `2023-10-01T12:00:00Z`)
-
-## Platform: 
-- `!setplatform <session_id> <platform>` - Set the platform for a specific session
-- `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
-
-## Game:
-- `!game <game_id|game_name>` - Show information about a game
-- `!setgame <session_id> "Game Name"` - Change the game of a specific session
-- `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
-
-# Platform:
+## Platforms: 
 - `!platform` - Show your current default platform
 - `!platform <name>` - Set your default platform
 - `!platforms` - List all valid platforms
+- `!setplatform <session_id> <platform>` - Set the platform for a specific session
+- `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
+
+## Games:
+- `!game <game_id|game_name>` - Show information about a game
+- `!setgame <session_id> "Game Name"` - Change the game of a specific session
+- `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
 """
     admin = """
+-----------------------
 # ☢️ Admin commands:
 - `!setgameimage <game_id> <url|null>`
 - `!setsteamid <game_id> <steam_id|null>`
