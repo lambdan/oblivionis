@@ -53,6 +53,15 @@ dtEqual(utils.datetimeParse("-666m666s"), datetime.datetime.now(datetime.UTC) - 
 dtEqual(utils.datetimeParse("-666h666s"), datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=666,seconds=666), "just hours and seconds")
 dtEqual(utils.datetimeParse("-666h666m"), datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=666,minutes=666), "just hours and minutes")
 
+# hh:mm:ss format
+
+dtEqual(utils.datetimeParse("-00:01:01"), datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1, seconds=1), "-00:00:01")
+
+dtEqual(utils.datetimeParse("-01:01:01"), datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1, minutes=1, seconds=1), "-00:00:01")
+
+dtEqual(utils.datetimeParse("-00:00:01"), datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=1), "-00:00:01")
+
+
 
 ###########
 # secs to hh:mm:ss

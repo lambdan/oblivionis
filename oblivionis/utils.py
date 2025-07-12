@@ -18,7 +18,14 @@ def datetimeParse(s: str) -> datetime.datetime | None:
     if s.startswith("-"):
         s = s.lower().strip()
         s = s[1:]  # Remove the leading '-' for easier parsing
-        # Relative time, e.g., "-1h30m"
+        if ":" in s:
+            parts = s.split(":")
+            if len(parts) != 3:
+                return None
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = int(parts[2])
+            return now() - datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
         hours = 0
         mins = 0
         secs = 0
