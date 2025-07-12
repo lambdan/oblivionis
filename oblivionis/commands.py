@@ -76,35 +76,31 @@ def user_name_from_message(message: discord.Message) -> str:
         raise ValueError("Message author is None")
     return message.author.name
 
-def dm_add_session(user: User, message: str) -> str:
-    # !add "Game Name" <duration> [timestamp]
-    message = message.removeprefix('!add "')
-    gameName = message.split('"')[0].strip()
+def dm_add_session(user: User, msg: str) -> str:
+    # !add "Game Name" <duration> [timestamp|relative_time]
 
-    parts = message.split('"')[1].split()
-    timestamp = None
-    duration = None
-    last = parts.pop() # This is the timestamp if provided
-    if last.upper().endswith("Z"):
-        timestamp = utils.datetimeFromISO8601(last)
-        duration = utils.secsFromString(parts.pop())
-    else:
-        duration = utils.secsFromString(last)
+    splitted = msg.split(' ')
+    timestamp = utils.now()
+    duration = 0
 
-    if timestamp is None:
-        timestamp = utils.now()
+    last = splitted.pop().strip()
+    while not last.endswith('"'): # while not hitting the game name
+        if last.endswith("Z") or last.startswith("-"):
+            timestamp = utils.datetimeParse(last)
+            if timestamp is None:
+                return "Invalid timestamp format"
+        else:
+            duration = utils.secsFromString(last)
+            if duration is None:
+                return "Invalid duration format"
+        last = splitted.pop().strip()
     
-    dateValid = utils.validateDate(timestamp)
-    if dateValid != "OK":
-        return f"ERROR: {dateValid}"
-    
-    if duration is None:
-        return "ERROR: Duration is invalid"
-    
-    if duration > (3600*16):
-        return "ERROR: Duration is too long (max 16 hours)"
+    msg = msg.removeprefix('!add "') # remove first quote
+    gameName = msg.split('"')[0].strip() # game name from last quote
     
     game, created = Game.get_or_create(name=gameName)
+    if created:
+        logger.info("Added new game %s to database", gameName)
     
     result = operations.add_session(
                     user=user,
@@ -117,23 +113,29 @@ def dm_add_session(user: User, message: str) -> str:
     return f"ERROR: {result[1]}"
 
 def dm_start_session(user: User, msg: str) -> str:
-    # !start "Game Name"
-    # !start "Game Name" <platform>
+    # !start "Game Name" <platform> <datetime|relative_time>
     runningSession = LiveActivity.get_or_none(LiveActivity.user == user)
     if runningSession:
         return "You already have a session running. Use `!stop` to end it first."
 
-    msg = msg.removeprefix('!start "').strip()
+    splitted = msg.split(' ')
+    timestamp = utils.now()
+    platform = user.default_platform
 
+    last = splitted.pop().strip() 
+    while not last.endswith('"'):
+        if last.endswith("Z") or last.startswith("-"):
+            timestamp = utils.datetimeParse(last)
+            if timestamp is None:
+                return "Invalid timestamp format"
+        else:
+            platform = Platform.get_or_none(Platform.abbreviation == last.lower())
+            if not platform:
+                return "Invalid platform"
+        last = splitted.pop().strip()
+    
+    msg = msg.removeprefix('!start "')
     gameName = msg.split('"')[0].strip()
-
-    platform = user.default_platform 
-    if not msg.endswith('"'):
-        # Platform is specified after the game name
-        platform = msg.split('"')[1].strip().lower()
-        platform = Platform.get_or_none(Platform.abbreviation == platform)
-        if not platform:
-            return "Invalid platform"
         
     game, created = Game.get_or_create(name=gameName)
     if created:
@@ -143,9 +145,9 @@ def dm_start_session(user: User, msg: str) -> str:
         user=user,
         game=game,
         platform=platform,
-        started=utils.now()
+        started=timestamp
     )
-    return f"⏱️ Started playing **{game.name}** on **{platform.abbreviation}**.\nSend `!stop` to end the session."
+    return f"⏱️ Started playing **{game.name}** on **{platform.abbreviation}** at {timestamp.isoformat()}.\nSend `!stop` to end the session."
 
 def dm_stop_session(user: User, message: discord.Message) -> str:
     # !stop
@@ -263,7 +265,7 @@ def dm_set_date(user: User, message: discord.Message) -> str:
         return "Invalid format"
     
     session_id = int(parts[0])
-    new_date = utils.datetimeFromISO8601(parts[1])
+    new_date = utils.datetimeParse(parts[1])
     if new_date is None:
         return "Date format is invalid"
     
