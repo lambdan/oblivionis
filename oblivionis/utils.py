@@ -9,22 +9,45 @@ def now() -> datetime.datetime:
     """
     return datetime.datetime.now(datetime.UTC)
 
-def datetimeFromISO8601(s: str) -> datetime.datetime | None:
+def datetimeParse(s: str) -> datetime.datetime | None:
     """
-    Parses an datetime from a JS-like ISO8601 string (`YYYY-MM-DDTHH:MM:SSZ`)
+    Parses an datetime from a JS-like ISO8601 string (`YYYY-MM-DDTHH:MM:SSZ`) 
+    or 
+    relative time (-1h30m5s)
     """
+    if s.startswith("-"):
+        s = s.lower().strip()
+        s = s[1:]  # Remove the leading '-' for easier parsing
+        # Relative time, e.g., "-1h30m"
+        hours = 0
+        mins = 0
+        secs = 0
+        if "h" in s:
+            hours = s.split("h")[0]
+            s = s.replace(hours + "h", "")
+            hours = int(hours)
+        if "m" in s:
+            mins = s.split("m")[0]
+            s = s.replace(mins + "m", "")
+            mins = int(mins)
+        if "s" in s:
+            secs = s.split("s")[0]
+            s = s.replace(secs + "s", "")
+            secs = int(secs)
+        return now() - datetime.timedelta(hours=hours, minutes=mins, seconds=secs)
+
     try:
         s = s.upper().strip()
         return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
     except Exception as e:
         return None
 
-def secsToHHMMSS(secs: int) -> str | None:
+def secsToHHMMSS(secs: int) -> str:
     """
     Returns a string in HH:MM:SS format
     """
     if secs < 0:
-        return None
+        return "00:00:00"
     try:
         hours = secs // 3600
         minutes = (secs % 3600) // 60
@@ -32,7 +55,7 @@ def secsToHHMMSS(secs: int) -> str | None:
         return f"{hours:02}:{minutes:02}:{seconds:02}"
     except Exception as e:
         logger.error("Error converting seconds to HH:MM:SS format: %s", e)
-        return None
+        return "00:00:00"
 
 def secsFromString(s: str) -> int | None:
     """
