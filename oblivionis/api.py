@@ -470,7 +470,7 @@ def get_discord_avatar(discord_user_id: int):
     cache_entry = discord_avatar_cache.get(discord_user_id)
     if cache_entry:
         url, timestamp = cache_entry
-        if now - timestamp < 86400:  # 24 hours in seconds
+        if now - timestamp < 3600:  # 1 hour cache
             logger.debug("Returning cached avatar for user %s", discord_user_id)
             return {"url": url}
     logger.debug("Fetching avatar for user %s from Discord", discord_user_id)
