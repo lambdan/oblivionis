@@ -66,7 +66,7 @@ def get_users(offset=0, limit=25):
     limit, offset = validateLimitOffset(limit, offset)
     response: PaginatedResponse = {
         "data": [],
-        "_total": User.select().count(),
+        "_total": get_user_count(),
         "_offset": offset,
         "_limit": limit,
     }
@@ -390,7 +390,11 @@ def get_activity_count(userId: int | None = None, gameId: int | None = None, pla
 
 @app.get("/api/stats/total_users")
 def get_user_count() -> int:
-    return User.select().count()
+    total = 0
+    for user in User.select():
+        if get_activity_count(userId=user.id) > 0:
+            total += 1
+    return total
 
 @app.get("/api/stats/total_games")
 def get_game_count(userId: int | None = None) -> int:
