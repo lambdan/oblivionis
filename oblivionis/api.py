@@ -47,10 +47,16 @@ def get_user(userId: int):
     user = User.get_or_none(User.id == userId)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    total_activities = get_activity_count(userId=user.id)
+    if total_activities == 0:
+        logger.warning("User %s has no activities, returning 404", user.id)
+        raise HTTPException(status_code=404, detail="User not found")
+
     data: UserWithStats = {
         "user": model_to_dict(user),  # type: ignore
         "last_played": get_last_activity(userid=user.id)["timestamp"], # type: ignore
-        "total_activities":  get_activity_count(userId=user.id),
+        "total_activities":  total_activities,
         "total_playtime":  get_total_playtime(userId=user.id),
     }
     return fixDatetime(data)
