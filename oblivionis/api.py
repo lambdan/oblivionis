@@ -192,7 +192,7 @@ def get_last_activity(userid: int | None = None, gameid: int | None = None, plat
     last_activity = query.first()
     
     if not last_activity:
-        raise HTTPException(status_code=404, detail="No activity found")
+        return None
 
     return fixDatetime(model_to_dict(last_activity))
 
