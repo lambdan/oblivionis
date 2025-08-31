@@ -137,3 +137,22 @@ def adm_del_platform(message: discord.Message) -> str:
     platform.delete_instance()
     return "OK, deleted platform " + abbr
 
+def adm_delete_activity(message: discord.Message) -> str:
+    # !adm_deleteactivity <activity_id>
+    i = int(message.content.split()[1].strip())
+    activity = Activity.get_or_none(Activity.id == i) # type: ignore
+    if activity is None:
+        return f"ERROR: Activity with ID {i} not found."
+    activity.delete_instance()
+    return f"OK! Deleted activity {i}"
+
+def adm_toggle_block_commands(message: discord.Message) -> str:
+    # !adm_toggleblockcommands <user_id>
+    i = int(message.content.split()[1].strip())
+    user = User.get_or_none(User.id == i)
+    if user is None:
+        return f"ERROR: User with ID {i} not found."
+    user.bot_commands_blocked = not user.bot_commands_blocked
+    user.save()
+    status = "blocked 🛑" if user.bot_commands_blocked else "unblocked ✅"
+    return f"OK! User {user.name} (ID {user.id}) is now {status} from using bot commands."

@@ -30,13 +30,13 @@ def dm_help(isAdmin: bool) -> str:
 - `!platform` - Show your current default platform
 - `!platform <name>` - Set your default platform
 - `!platforms` - List all valid platforms
-- `!setplatform <session_id> <platform>` - Set the platform for a specific session
-- `!setplatform <session_id1-session_id2> <platform>` - Set the platform for a range of sessions (e.g. `!setplatform 123-456 steam-deck`)
+- `!setplatform <session_id> <platform>`
+- `!setplatform <session_id1-session_id2> <platform>` 
 
 ## Games:
-- `!game <game_id|game_name>` - Show information about a game
-- `!setgame <session_id> "Game Name"` - Change the game of a specific session
-- `!setgame <session_id1-session_id2> "Game Name"` - Change the game for a range of sessions (e.g. `!setgame 123-456 "New Game"`)
+- `!game <game_id|game_name>` 
+- `!setgame <session_id> "Game Name"` 
+- `!setgame <session_id1-session_id2> "Game Name"` 
 """
     admin = """
 -----------------------
@@ -49,6 +49,8 @@ def dm_help(isAdmin: bool) -> str:
 - `!setgamereleaseyear <game_id> <year>`
 - `!addplatform <platform_abbreviation> <platform_name>`
 - `!delplatform <platform_abbreviation>`
+- `!adm_deleteactivity <activity_id>`
+- `!adm_toggleblockcommands <user_id>`
 """
     if isAdmin:
         return base + admin
@@ -362,6 +364,9 @@ def dm_receive(message: discord.Message) -> str:
     if user is None:
         logger.error("Could not get Oblivionis User for message: %s", message)
         return "ERROR: Try again later"
+    
+    if user.bot_commands_blocked:
+        return "You are blocked from using bot commands"
 
     isAdmin = str(message.author.id) in ADMINS
     if isAdmin:
@@ -381,6 +386,10 @@ def dm_receive(message: discord.Message) -> str:
             return admin_commands.adm_add_platform(message)
         elif msg.startswith("!delplatform"):
             return admin_commands.adm_del_platform(message)
+        elif msg.startswith("!adm_deleteactivity"):
+            return admin_commands.adm_delete_activity(message)
+        elif msg.startswith("!adm_toggleblockcommands"):
+            return admin_commands.adm_toggle_block_commands(message)
 
     if msg.startswith("!help"):
         return dm_help(isAdmin)

@@ -47,6 +47,7 @@ class User(BaseModel):
     id = CharField(primary_key=True)
     name = CharField()
     default_platform = ForeignKeyField(Platform, default=lambda: Platform.get_or_create(abbreviation="pc")[0])
+    bot_commands_blocked = BooleanField(default=False)
 
 
 class Game(BaseModel):
