@@ -71,7 +71,11 @@ def get_users(offset=0, limit=25):
         "_limit": limit,
     }
     for user in User.select().limit(limit).offset(offset):
-        response["data"].append(get_user(user.id))
+        try:
+            response["data"].append(get_user(user.id))
+        except:
+            logger.warning("Skipping user %s in get_users", user.id)
+            continue
     return fixDatetime(response)
 
 @app.get("/api/users/{userId}/games")
