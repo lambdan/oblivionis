@@ -40,8 +40,6 @@ def fixDatetime(data):
         return [fixDatetime(item) for item in data]
 
 
-
-
 @app.get("/api/users/{userId}")
 def get_user(userId: int):
     user = User.get_or_none(User.id == userId)
@@ -54,7 +52,7 @@ def get_user(userId: int):
         raise HTTPException(status_code=404, detail="User not found")
 
     data: UserWithStats = {
-        "user": model_to_dict(user),  # type: ignore
+        "user": model_to_dict(user, exclude=[User.bot_commands_blocked, User.default_platform]),  # type: ignore
         "last_played": get_last_activity(userid=user.id)["timestamp"], # type: ignore
         "total_activities":  total_activities,
         "total_playtime":  get_total_playtime(userId=user.id),
