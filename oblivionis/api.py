@@ -164,7 +164,7 @@ def get_user_stats(user_id: int):
 
 @app.get("/api/activities")
 def list_activities(offset = 0, limit = 25, order = "desc", user: int | None = None, game: int | None = None, platform: int | None = None):
-    limit, offset = validateLimitOffset(limit, offset)
+    limit, offset = validateLimitOffset(limit, offset, maxLimit=500)
     activities = [model_to_dict(activity) for activity in 
         Activity.select().offset(offset).limit(limit).order_by(Activity.timestamp.desc() if order == "desc" else Activity.timestamp.asc())
         .where(
