@@ -3,6 +3,9 @@ import os
 
 DEBUG = os.environ.get("DEBUG") == "1"
 
+if DEBUG:
+    print("⚠️⚠️⚠️ Running in DEBUG mode ⚠️⚠️⚠️")
+
 ADMINS = os.environ.get("ADMINS", "").split(",") if os.environ.get("ADMINS") else []
 
 LOGLEVEL = logging.DEBUG if DEBUG else logging.INFO

@@ -14,12 +14,21 @@ logger = logging.getLogger("api")
 
 app = FastAPI()
 
-def validateLimitOffset(limit: int|str, offset: int|str, maxLimit=50):
-    if not (1 <= int(limit) <= maxLimit):
-        raise HTTPException(status_code=400, detail="Limit must be between 1 and " + str(maxLimit))
-    if int(offset) < 0:
-        raise HTTPException(status_code=400, detail="Offset must be non-negative")
-    return int(limit), int(offset)
+def validateLimitOffset(limit: int|str, offset: int|str, maxLimit=50) -> tuple[int, int]:
+    """
+    Returns `[ limit , offset ]`
+    """
+    try:
+        offset = max(0, int(offset))
+    except:
+        offset = 0
+
+    try:
+        limit = max(1, min(maxLimit, int(limit)))
+    except:
+        limit = maxLimit
+    
+    return limit, offset
 
 def fixDatetime(data):
     """
