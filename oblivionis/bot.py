@@ -20,6 +20,14 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+activities = {}
+def get_stored_activity(member, activity) -> dict | None:
+    """Get an applicable activity from the in-memory storage."""
+    stored = activities.pop(member.id, None)
+    if stored and stored["application_id"] == activity.application_id:
+        return stored
+    return None
+
 def game_from_discord_activity(activity: discord.Activity) -> storage_v2.Game:
     gameName = activity.name
     if gameName == "Steam Deck" and activity.details:
@@ -58,12 +66,22 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         message=f"{before.activity} -> {after.activity}"
     )
 
-    if after.activity == before.activity or before.activity is None:
-        return
+    #if after.activity == before.activity or before.activity is None:
+    #    return
 
     if after.activity is None and before.activity.type == discord.ActivityType.playing:
         activity: discord.Activity = before.activity # type: ignore
-        duration = datetime.datetime.now(datetime.UTC) - activity.start # type: ignore
+
+        # Determine how long the activity lasted.
+        start = activity.start
+        if start is None and (stored_activity := get_stored_activity(after, activity)):
+            logger.warning("Discord API did not return activity start time; falling back to stored")
+            start = stored_activity["start"] or stored_activity["timestamp"]
+        if start is None:
+            logger.info("Could not determine duration for member %s activity %s", after, game_from_discord_activity(activity))
+            return
+        duration = datetime.datetime.now(datetime.UTC) - start
+        
         seconds = int(duration.total_seconds())
 
         game = game_from_discord_activity(activity)
@@ -83,6 +101,15 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
             platform=platform,
         )
     elif after.activity and after.activity.type == discord.ActivityType.playing:
+
+        if (after.id not in activities or activities[after.id]["application_id"] != after.activity.application_id):
+            activities[after.id] = {
+                "application_id": after.activity.application_id,
+                "name": after.activity.name,
+                "start": after.activity.start,
+                "timestamp": datetime.datetime.now(datetime.UTC),
+            }
+
         activity: discord.Activity = after.activity # type: ignore
         game = game_from_discord_activity(activity)
         platform = platform_from_discord_activity(activity)
